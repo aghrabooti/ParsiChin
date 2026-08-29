@@ -80,7 +80,9 @@
       id: "deepseek",
       name: "DeepSeek",
       sites: ["deepseek.com"],
-      root: "main, .ds-chat"
+      // DeepSeek's current SPA mounts the conversation below #app and does
+      // not consistently expose a <main> or .ds-chat element.
+      root: "main, .ds-chat, #app"
     },
     {
       id: "copilot",
