@@ -5,7 +5,8 @@
  *  1. read settings and decorate text blocks that contain Persian,
  *  2. keep working while AI replies stream in (MutationObserver),
  *  3. react to settings changes / popup messages (re-scan or cleanup),
- *  4. never touch forms, code blocks, or English-only content by default.
+ *  4. never touch forms, code blocks, or English-only content by default,
+ *  5. restore the page exactly as it was when disabled (incl. native dir).
  */
 (function () {
   "use strict";
@@ -18,17 +19,46 @@
 
   /** Elements we decorated in this page; used for cleanup on disable. */
   const decorated = new Set();
-  /** Elements already classified; avoids re-scanning big trees. */
-  const processed = new WeakSet();
+
+  /**
+   * Original `dir` state of every element we touched. We MUST remember it:
+   * the page itself may already have dir="rtl"/"ltr"/"auto" (native RTL
+   * sites!). On cleanup we restore the exact original state instead of
+   * blindly removing the attribute — otherwise toggling the extension off
+   * breaks the site's own layout.
+   */
+  const originalDir = new WeakMap();
 
   let currentSettings = null;
   let rootEl = null;
   let observer = null;
+  let observerTarget = null;
 
   function isProtected(el) {
     return el.matches(rules().SKIP_SELECTOR) ||
       !!el.closest("input, textarea, select, [contenteditable='true'], [role='textbox']");
   }
+
+  /* ---------------- dir state preservation ---------------- */
+
+  function recordDir(el) {
+    if (!originalDir.has(el)) {
+      originalDir.set(el, {
+        existed: el.hasAttribute("dir"),
+        value: el.getAttribute("dir")
+      });
+    }
+  }
+
+  function restoreDir(el) {
+    const orig = originalDir.get(el);
+    if (!orig) return;
+    if (orig.existed) el.setAttribute("dir", orig.value);
+    else el.removeAttribute("dir");
+    originalDir.delete(el);
+  }
+
+  /* ---------------- base CSS variables ---------------- */
 
   function applyBaseVariables(settings) {
     const html = document.documentElement;
@@ -50,6 +80,8 @@
     html.style.removeProperty("--pc-font-weight");
   }
 
+  /* ---------------- decoration ---------------- */
+
   /** Decorate a single text block (idempotent per element). */
   function decorate(el, settings) {
     if (!(el instanceof Element) || isProtected(el)) return;
@@ -65,7 +97,10 @@
       ? (info.kind === "persian" ? "rtl" : "auto")
       : bidi().directionFor(info.kind);
 
-    if (dir) el.setAttribute("dir", dir);
+    if (dir) {
+      recordDir(el);
+      el.setAttribute("dir", dir);
+    }
     el.classList.add("pc-block");
     el.classList.toggle("pc-persian", info.kind === "persian");
     el.classList.toggle("pc-mixed", info.kind !== "persian");
@@ -79,8 +114,6 @@
         if (fixed !== node.data) node.data = fixed;
       });
     }
-
-    processed.add(el);
   }
 
   /**
@@ -97,7 +130,10 @@
       decorated.add(el);
     }
     const dir = bidi().directionFor(info.kind);
-    if (dir && el.getAttribute("dir") !== dir) el.setAttribute("dir", dir);
+    if (dir) {
+      recordDir(el);
+      el.setAttribute("dir", dir);
+    }
     el.classList.toggle("pc-persian", info.kind === "persian");
     el.classList.toggle("pc-mixed", info.kind !== "persian");
   }
@@ -111,26 +147,32 @@
     for (let i = 0; i < children.length; i++) walk(children[i], settings);
   }
 
+  /* ---------------- scan root ---------------- */
+
+  /** Is the current host blocked by a per-site override? */
+  function hostBlocked(settings) {
+    return Object.keys(settings.siteOverrides || {}).some(function (key) {
+      return settings.siteOverrides[key] === false &&
+        rules().hostMatchesRule(location.hostname, key);
+    });
+  }
+
+  /** True when this page is in scope (known site + not blocked, or allSites). */
+  function pageInScope(settings) {
+    const rule = rules().ruleForHost(location.hostname);
+    if (!rule) return !!settings.allSites;
+    return !hostBlocked(settings);
+  }
+
   /** Find the best scan root for the current page. */
   function resolveRoot(settings) {
-    const ruleHost = rules().ruleForHost(location.hostname);
-
-    // Per-site override: user explicitly turned this site off.
-    if (ruleHost) {
-      const blocked = Object.keys(settings.siteOverrides || {}).some(function (key) {
-        const value = settings.siteOverrides[key];
-        if (value === false) {
-          return rules().hostMatchesRule(location.hostname, key);
-        }
-        return false;
-      });
-      if (blocked) return null;
-    }
+    const rule = rules().ruleForHost(location.hostname);
+    if (rule && hostBlocked(settings)) return null;
 
     let root = null;
-    if (ruleHost) {
-      // "main, .a, .b" -> first match wins; scan the largest one found.
-      const candidates = ruleHost.root.split(",").map(function (s) { return s.trim(); });
+    if (rule) {
+      // "main, .a, .b" -> pick the largest match.
+      const candidates = rule.root.split(",").map(function (s) { return s.trim(); });
       for (const sel of candidates) {
         const el = document.querySelector(sel);
         if (el && (!root || el.textContent.length > root.textContent.length)) root = el;
@@ -143,7 +185,9 @@
     return root;
   }
 
-  /** Full (re)scan of the current page. */
+  /* ---------------- apply / cleanup ---------------- */
+
+  /** Full (re)scan of the current page + (re)start live observation. */
   function applyAll(settings) {
     currentSettings = settings;
     if (!settings.enabled) return cleanup();
@@ -151,65 +195,99 @@
     applyBaseVariables(settings);
     rootEl = resolveRoot(settings);
     if (rootEl) walk(rootEl, settings);
+
+    // IMPORTANT: observer must be (re)scheduled on every enable, not only at
+    // boot — cleanup() disconnects it when the user toggles the extension off.
+    scheduleRefresh();
   }
 
   /** Undo everything we added (used when the user disables the extension). */
   function cleanup() {
-    if (observer) { observer.disconnect(); observer = null; }
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+      observerTarget = null;
+    }
     decorated.forEach(function (el) {
       el.classList.remove("pc-block", "pc-persian", "pc-mixed");
-      if (el.getAttribute("dir") === "rtl" || el.getAttribute("dir") === "auto") {
-        el.removeAttribute("dir");
-      }
+      restoreDir(el); // restore the site's own dir, never strip it
     });
     decorated.clear();
     removeBaseVariables();
     rootEl = null;
   }
 
+  /* ---------------- live observation ---------------- */
+
   function scheduleRefresh() {
-    if (observer) return; // observer already running
+    if (!currentSettings) return;
+    // Watch the resolved root; while it's still missing (SPA/delayed render)
+    // watch <body> — but only when the page is actually in scope.
+    const target = rootEl || (pageInScope(currentSettings) ? document.body : null);
+    if (!target) return;
+    if (observer && observerTarget === target) return;
+    if (observer) observer.disconnect();
     observer = new MutationObserver(onMutations);
-    observer.observe((rootEl || document.body), {
+    observerTarget = target;
+    observer.observe(target, {
       childList: true,
       subtree: true,
       characterData: true
     });
   }
 
+  /** Root wasn't there at boot (SPA) — try again once content appears. */
+  function resolveRootLater() {
+    if (rootEl) return;
+    const found = resolveRoot(currentSettings);
+    if (found) {
+      rootEl = found;
+      walk(found, currentSettings);
+      scheduleRefresh(); // re-target the observer to the real root
+    }
+  }
+
   function onMutations(mutations) {
     if (!currentSettings || !currentSettings.enabled) return;
-    const pendingText = [];
+    if (!rootEl) resolveRootLater();
 
+    const pendingText = [];
     for (const mutation of mutations) {
       if (mutation.type === "characterData") {
         pendingText.push(mutation.target);
         continue;
       }
       for (const node of mutation.addedNodes) {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          if (!rootEl || rootEl.contains(node)) walk(node, currentSettings);
-        } else if (node.nodeType === Node.TEXT_NODE) {
-          pendingText.push(node);
+        if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        if (rootEl) {
+          if (rootEl.contains(node)) walk(node, currentSettings);
+        } else if (currentSettings.allSites) {
+          walk(node, currentSettings);
         }
       }
     }
 
     pendingText.forEach(function (textNode) {
-      let parent = textNode.parentElement;
+      const parent = textNode.parentElement;
+      if (!parent) return;
+      // Only refresh inside the scan root (or everywhere in allSites mode).
+      if (rootEl && !rootEl.contains(parent) && !currentSettings.allSites) return;
+      if (!rootEl && !currentSettings.allSites) return;
       let depth = 0;
-      while (parent && depth < 4) {
-        refresh(parent);
-        parent = parent.parentElement;
+      let el = parent;
+      while (el && depth < 4) {
+        refresh(el);
+        el = el.parentElement;
         depth++;
       }
     });
   }
 
+  /* ---------------- boot ---------------- */
+
   async function boot() {
     const settings = await window.ParsiChinSettings.get();
     applyAll(settings);
-    scheduleRefresh();
 
     window.ParsiChinSettings.onChange(function (next) {
       applyAll(next);

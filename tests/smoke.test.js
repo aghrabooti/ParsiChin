@@ -33,6 +33,7 @@ async function main() {
         <p id="mixed">این جمله با کلمه‌ی Model و Prompt ترکیب شده است.</p>
         <p id="mostlyEn">This response is mostly English, but includes words like هوش مصنوعی and مدل.</p>
         <p id="punct">سلام, دنیا</p>
+        <p id="nativeRtl" dir="rtl">سایتی که خودش راست‌چین است</p>
         <pre id="code">const x = "سلام";</pre>
         <textarea id="ta">سلام</textarea>
         <div id="direct">متن مستقیم داخل دایو</div>
@@ -106,6 +107,9 @@ async function main() {
   const direct = window.document.getElementById("direct");
   assert.ok(direct.classList.contains("pc-block"), "div with direct text decorated");
 
+  const nativeRtl = window.document.getElementById("nativeRtl");
+  assert.strictEqual(nativeRtl.getAttribute("dir"), "rtl", "native dir kept while enabled");
+
   /* ---------- streaming mutation ---------- */
   const root = window.document.querySelector("main");
   const streamed = window.document.createElement("p");
@@ -123,12 +127,30 @@ async function main() {
   assert.strictEqual(bidi.normalizePunctuation("سلام, دنیا"), "سلام، دنیا");
   assert.strictEqual(bidi.normalizePunctuation("hello, world"), "hello, world");
 
-  /* ---------- cleanup on disable ---------- */
-  const next = Object.assign({}, store.parsiChinSettings, { enabled: false });
-  onStorage.forEach((cb) => cb({ parsiChinSettings: { newValue: next } }, "local"));
+  /* ---------- toggle OFF ---------- */
+  const full = (enabled) => Object.assign({}, store.parsiChinSettings, { enabled });
+  onStorage.forEach((cb) => cb({ parsiChinSettings: { newValue: full(false) } }, "local"));
   await tick(40);
   assert.ok(!htmlEl.classList.contains("parsi-chin-active"), "html deactivated");
   assert.ok(!fa.classList.contains("pc-block"), "decorations removed");
+  assert.strictEqual(nativeRtl.getAttribute("dir"), "rtl",
+    "site's own dir attribute restored after disable (bug: was stripped)");
+  assert.ok(!en.classList.contains("pc-block"), "english block still untouched");
+
+  /* ---------- toggle ON again (the reported bug) ---------- */
+  onStorage.forEach((cb) => cb({ parsiChinSettings: { newValue: full(true) } }, "local"));
+  await tick(40);
+  assert.ok(htmlEl.classList.contains("parsi-chin-active"), "re-enabled");
+  assert.ok(fa.classList.contains("pc-block"), "re-decorated after re-enable");
+  assert.strictEqual(fa.getAttribute("dir"), "rtl", "dir re-applied after re-enable");
+
+  // The observer must be live again after re-enable (was: never re-scheduled).
+  const streamedAfterToggle = window.document.createElement("p");
+  streamedAfterToggle.textContent = "پاسخ بعد از روشن شدن دوباره";
+  root.appendChild(streamedAfterToggle);
+  await tick(40);
+  assert.ok(streamedAfterToggle.classList.contains("pc-block"),
+    "streaming observer works again after re-enable");
 
   console.log("✔ smoke test passed — content script works in a simulated DOM");
 }
