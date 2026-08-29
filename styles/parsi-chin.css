@@ -5,30 +5,9 @@
    no-op on non-target pages.
    ========================================================================== */
 
-/* ---------- Bundled Vazirmatn font (no network requests) ---------- */
-@font-face {
-  font-family: "ParsiChin Vazirmatn";
-  src: url("fonts/Vazirmatn-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "ParsiChin Vazirmatn";
-  src: url("fonts/Vazirmatn-Medium.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "ParsiChin Vazirmatn";
-  src: url("fonts/Vazirmatn-Bold.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
+/* The bundled Vazirmatn faces are loaded by entry.js with
+   chrome.runtime.getURL().  Relative URLs in a manifest content stylesheet
+   resolve against the host page (e.g. chat.deepseek.com), not this extension. */
 
 html.parsi-chin-active {
   --pc-font: "ParsiChin Vazirmatn", Vazirmatn, "Vazirmatn", "Segoe UI", Tahoma, Arial, sans-serif;
