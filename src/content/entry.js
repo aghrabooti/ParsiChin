@@ -33,6 +33,7 @@
   let rootEl = null;
   let observer = null;
   let observerTarget = null;
+  const requestedFonts = new Set();
 
   function isProtected(el) {
     return el.matches(rules().SKIP_SELECTOR) ||
@@ -60,6 +61,37 @@
 
   /* ---------------- base CSS variables ---------------- */
 
+  /**
+   * Content-stylesheet URLs are resolved relative to the host page. Load
+   * bundled fonts through the extension URL instead, so sites such as
+   * DeepSeek never receive a request for /fonts/Vazirmatn-*.woff2.
+   */
+  function loadBundledFonts() {
+    if (typeof FontFace !== "function" || !document.fonts ||
+        !chrome.runtime || typeof chrome.runtime.getURL !== "function") return;
+
+    [
+      ["styles/fonts/Vazirmatn-Regular.woff2", "400"],
+      ["styles/fonts/Vazirmatn-Medium.woff2", "500"],
+      ["styles/fonts/Vazirmatn-Bold.woff2", "700"]
+    ].forEach(function (font) {
+      const path = font[0];
+      if (requestedFonts.has(path)) return;
+      requestedFonts.add(path);
+
+      const face = new FontFace(
+        "ParsiChin Vazirmatn",
+        "url(" + JSON.stringify(chrome.runtime.getURL(path)) + ") format('woff2')",
+        { weight: font[1], style: "normal", display: "swap" }
+      );
+      face.load().then(function (loadedFace) {
+        document.fonts.add(loadedFace);
+      }).catch(function () {
+        // Keep the system-font fallback when a browser declines a font load.
+      });
+    });
+  }
+
   function applyBaseVariables(settings) {
     const html = document.documentElement;
     html.classList.add("parsi-chin-active");
@@ -68,6 +100,7 @@
     html.style.setProperty("--pc-font-weight", String(settings.fontWeight));
     html.classList.toggle("pc-font-vazirmatn", settings.fontFamily === "vazirmatn");
     html.classList.toggle("pc-code-ltr", settings.keepCodeLtr !== false);
+    if (settings.fontFamily === "vazirmatn") loadBundledFonts();
   }
 
   function removeBaseVariables() {
