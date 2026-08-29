@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "ParsiChin — Mixed Persian Text Fixer",
+    "description": "Extension name"
+  },
+  "extDescription": {
+    "message": "Makes mixed Persian/English text readable on AI chat web pages for Persian readers.",
+    "description": "Extension description"
+  },
+  "popupOpenSettings": {
+    "message": "Open full settings",
+    "description": "Popup button"
+  }
+}
