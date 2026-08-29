@@ -1,0 +1,12 @@
+# Builds
+dist/
+
+# Node / tests (lockfile is committed for reproducible dev installs)
+node_modules/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
