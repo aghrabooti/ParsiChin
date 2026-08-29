@@ -40,6 +40,28 @@
       !!el.closest("input, textarea, select, [contenteditable='true'], [role='textbox']");
   }
 
+  /* ---------------- block detection ---------------- */
+
+  /**
+   * "Markdown container" selectors per site (e.g. DeepSeek renders the whole
+   * assistant message inside <div class="ds-markdown"> which holds NO direct
+   * text — only child elements). Those containers must be decorated too,
+   * otherwise direction never reaches the message text.
+   */
+  function markdownSelectors() {
+    const rule = rules().ruleForHost(location.hostname);
+    return (rule && rule.blockSelectors) || [];
+  }
+
+  function isBlockCandidate(el) {
+    if (rules().isTextBlock(el)) return true;
+    const extras = markdownSelectors();
+    for (let i = 0; i < extras.length; i++) {
+      if (el.matches(extras[i])) return true;
+    }
+    return false;
+  }
+
   /* ---------------- dir state preservation ---------------- */
 
   function recordDir(el) {
@@ -118,10 +140,13 @@
   /** Decorate a single text block (idempotent per element). */
   function decorate(el, settings) {
     if (!(el instanceof Element) || isProtected(el)) return;
-    if (!rules().isTextBlock(el)) return;
+    if (!isBlockCandidate(el)) return;
 
     const text = el.textContent || "";
     if (text.trim().length < 2) return;
+    // Never flip giant containers (the whole #app / page wrapper): such
+    // elements are scan roots, not text blocks.
+    if (text.length > 30000) return;
 
     const info = bidi().classify(text);
     if (info.kind === "none" && settings.applyMode !== "always") return;
@@ -155,7 +180,7 @@
    */
   function refresh(el) {
     if (!(el instanceof Element) || isProtected(el)) return;
-    if (!rules().isTextBlock(el) || !currentSettings) return;
+    if (!isBlockCandidate(el) || !currentSettings) return;
     const info = bidi().classify(el.textContent || "");
     if (info.kind === "none") return;
     if (!el.classList.contains("pc-block")) {
@@ -204,12 +229,24 @@
 
     let root = null;
     if (rule) {
-      // "main, .a, .b" -> pick the largest match.
+      // "main, .a, .b" -> prefer the NARROWEST candidate that really contains
+      // content; fall back to the largest one (e.g. #app) only when nothing
+      // else matched. Scanning #app as the root is fine, decorating it is not.
       const candidates = rule.root.split(",").map(function (s) { return s.trim(); });
+      let narrow = null;
+      let narrowLen = Infinity;
+      let largest = null;
       for (const sel of candidates) {
         const el = document.querySelector(sel);
-        if (el && (!root || el.textContent.length > root.textContent.length)) root = el;
+        if (!el) continue;
+        const len = el.textContent.length;
+        if (!largest || len > largest.textContent.length) largest = el;
+        if (len >= 200 && len <= 120000 && len < narrowLen) {
+          narrow = el;
+          narrowLen = len;
+        }
       }
+      root = narrow || largest;
     }
     if (!root && settings.allSites) {
       root = document.querySelector("main, article, [role='main']");
@@ -228,10 +265,26 @@
     applyBaseVariables(settings);
     rootEl = resolveRoot(settings);
     if (rootEl) walk(rootEl, settings);
+    logStats();
 
     // IMPORTANT: observer must be (re)scheduled on every enable, not only at
     // boot — cleanup() disconnects it when the user toggles the extension off.
     scheduleRefresh();
+  }
+
+  function logStats() {
+    let persian = 0;
+    let mixed = 0;
+    decorated.forEach(function (el) {
+      if (el.classList.contains("pc-persian")) persian++;
+      else mixed++;
+    });
+    console.debug(
+      "[ParsiChin] active · root=" +
+      (rootEl ? rootEl.tagName.toLowerCase() + "." + String(rootEl.className).split(" ").join(".") : "none") +
+      " · blocks=" + decorated.size +
+      " (persian=" + persian + ", mixed=" + mixed + ")"
+    );
   }
 
   /** Undo everything we added (used when the user disables the extension). */
