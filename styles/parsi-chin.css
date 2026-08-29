@@ -1,0 +1,92 @@
+/* ==========================================================================
+   ParsiChin — content stylesheet
+   Applies only when `html.parsi-chin-active` is present (set by entry.js).
+   Scoped entirely under .parsi-chin-active / .pc-block so the extension is a
+   no-op on non-target pages.
+   ========================================================================== */
+
+/* ---------- Bundled Vazirmatn font (no network requests) ---------- */
+@font-face {
+  font-family: "ParsiChin Vazirmatn";
+  src: url("fonts/Vazirmatn-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParsiChin Vazirmatn";
+  src: url("fonts/Vazirmatn-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ParsiChin Vazirmatn";
+  src: url("fonts/Vazirmatn-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+html.parsi-chin-active {
+  --pc-font: "ParsiChin Vazirmatn", Vazirmatn, "Vazirmatn", "Segoe UI", Tahoma, Arial, sans-serif;
+  --pc-font-size: 100%;
+  --pc-line-height: 1.9;
+  --pc-font-weight: 400;
+}
+
+/* Font: override the page font with the bundled Persian-friendly font. */
+html.parsi-chin-active.pc-font-vazirmatn body,
+html.parsi-chin-active.pc-font-vazirmatn .pc-block {
+  font-family: var(--pc-font);
+}
+
+/* ---------- Decorated text blocks ---------- */
+.parsi-chin-active .pc-block {
+  font-size: var(--pc-font-size);
+  font-weight: var(--pc-font-weight);
+  line-height: var(--pc-line-height);
+  letter-spacing: normal;
+  word-spacing: normal;
+  overflow-wrap: break-word;
+  text-align: start;
+}
+
+/* Persian-first paragraphs: force RTL + right alignment. */
+.parsi-chin-active .pc-block.pc-persian {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Truly mixed / mostly-Latin blocks: let the browser resolve direction
+   per paragraph from the first strong character. */
+.parsi-chin-active .pc-block.pc-mixed {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Children should follow the block's font metrics. */
+.parsi-chin-active .pc-block :is(p, span, a, em, strong, li, h1, h2, h3, h4, h5, h6, td, th, blockquote) {
+  line-height: inherit;
+}
+
+/* ---------- Code is always LTR (toggleable in settings) ---------- */
+html.parsi-chin-active.pc-code-ltr .pc-block pre,
+html.parsi-chin-active.pc-code-ltr .pc-block code,
+html.parsi-chin-active.pc-code-ltr .pc-block kbd,
+html.parsi-chin-active.pc-code-ltr pre,
+html.parsi-chin-active.pc-code-ltr code {
+  direction: ltr !important;
+  text-align: left !important;
+  unicode-bidi: isolate;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace !important;
+  line-height: 1.6 !important;
+}
+
+/* Keep headings readable and pleasant. */
+.parsi-chin-active .pc-block :is(h1, h2, h3, h4, h5, h6) {
+  line-height: 1.7;
+  font-weight: 700;
+}
