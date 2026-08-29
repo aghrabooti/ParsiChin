@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>ParsiChin</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="header">
+    <img class="logo" src="../../assets/icons/icon48.png" alt="" />
+    <div class="titles">
+      <h1>ParsiChin</h1>
+      <p class="subtitle">متن‌های دوزبانه، خوانا برای فارسی‌زبان‌ها</p>
+    </div>
+    <label class="switch" title="فعال / غیرفعال">
+      <input type="checkbox" id="enabled" />
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <main>
+    <div class="card" id="siteStatus">
+      <span class="dot" id="siteDot"></span>
+      <div>
+        <strong id="siteName">—</strong>
+        <p id="siteDetail" class="muted">در حال بررسی صفحه…</p>
+      </div>
+    </div>
+
+    <button class="btn primary" id="openOptions" data-i18n="popupOpenSettings">
+      تنظیمات کامل
+    </button>
+    <button class="btn ghost" id="feedback">
+      گزارش مشکل / پیشنهاد
+    </button>
+
+    <p class="footer muted">
+      نسخه <span id="version">0.1.0</span> · شبکه‌ی معرفی: 
+      <a href="https://github.com/aghrabooti/ParsiChin" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </main>
+
+  <script src="../shared/defaults.js"></script>
+  <script src="../shared/settings.js"></script>
+  <script src="../content/rules.js"></script>
+  <script src="../shared/i18n.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
