@@ -33,6 +33,7 @@ async function main() {
         <p id="mixed">این جمله با کلمه‌ی Model و Prompt ترکیب شده است.</p>
         <p id="mostlyEn">This response is mostly English, but includes words like هوش مصنوعی and مدل.</p>
         <p id="punct">سلام, دنیا</p>
+        <p id="nativeRtl" dir="rtl">سایتی که خودش راست‌چین است</p>
         <pre id="code">const x = "سلام";</pre>
         <textarea id="ta">سلام</textarea>
         <div id="direct">متن مستقیم داخل دایو</div>
@@ -106,6 +107,9 @@ async function main() {
   const direct = window.document.getElementById("direct");
   assert.ok(direct.classList.contains("pc-block"), "div with direct text decorated");
 
+  const nativeRtl = window.document.getElementById("nativeRtl");
+  assert.strictEqual(nativeRtl.getAttribute("dir"), "rtl", "native dir kept while enabled");
+
   /* ---------- streaming mutation ---------- */
   const root = window.document.querySelector("main");
   const streamed = window.document.createElement("p");
@@ -123,17 +127,93 @@ async function main() {
   assert.strictEqual(bidi.normalizePunctuation("سلام, دنیا"), "سلام، دنیا");
   assert.strictEqual(bidi.normalizePunctuation("hello, world"), "hello, world");
 
-  /* ---------- cleanup on disable ---------- */
-  const next = Object.assign({}, store.parsiChinSettings, { enabled: false });
-  onStorage.forEach((cb) => cb({ parsiChinSettings: { newValue: next } }, "local"));
+  /* ---------- toggle OFF ---------- */
+  const full = (enabled) => Object.assign({}, store.parsiChinSettings, { enabled });
+  onStorage.forEach((cb) => cb({ parsiChinSettings: { newValue: full(false) } }, "local"));
   await tick(40);
   assert.ok(!htmlEl.classList.contains("parsi-chin-active"), "html deactivated");
   assert.ok(!fa.classList.contains("pc-block"), "decorations removed");
+  assert.strictEqual(nativeRtl.getAttribute("dir"), "rtl",
+    "site's own dir attribute restored after disable (bug: was stripped)");
+  assert.ok(!en.classList.contains("pc-block"), "english block still untouched");
+
+  /* ---------- toggle ON again (the reported bug) ---------- */
+  onStorage.forEach((cb) => cb({ parsiChinSettings: { newValue: full(true) } }, "local"));
+  await tick(40);
+  assert.ok(htmlEl.classList.contains("parsi-chin-active"), "re-enabled");
+  assert.ok(fa.classList.contains("pc-block"), "re-decorated after re-enable");
+  assert.strictEqual(fa.getAttribute("dir"), "rtl", "dir re-applied after re-enable");
+
+  // The observer must be live again after re-enable (was: never re-scheduled).
+  const streamedAfterToggle = window.document.createElement("p");
+  streamedAfterToggle.textContent = "پاسخ بعد از روشن شدن دوباره";
+  root.appendChild(streamedAfterToggle);
+  await tick(40);
+  assert.ok(streamedAfterToggle.classList.contains("pc-block"),
+    "streaming observer works again after re-enable");
 
   console.log("✔ smoke test passed — content script works in a simulated DOM");
 }
 
-main().catch((err) => {
+/**
+ * DeepSeek-like layout: assistant messages are <div class="ds-markdown">
+ * with NO direct text (only child p/div elements), mounted under #app.
+ * The markdown container itself must still get dir=rtl.
+ */
+async function testDeepSeekLayout() {
+  const html = `<!DOCTYPE html><html><body>
+    <div id="app">
+      <div class="chat-container">
+        <div class="ds-markdown">
+          <div class="paragraph">
+            <p>پاسخ دیپ‌سیک به زبان فارسی با مثال و کد</p>
+          </div>
+          <pre><code>print("سلام")</code></pre>
+        </div>
+      </div>
+    </div>
+  </body></html>`;
+
+  const dom = new JSDOM(html, {
+    url: "https://chat.deepseek.com/a/chat/s/123",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  const { window } = dom;
+  const store = {};
+  const onStorage = [];
+  window.chrome = {
+    storage: {
+      local: {
+        get: async (k) => ({ [k]: store.parsiChinSettings }),
+        set: async (o) => { Object.assign(store, o); }
+      },
+      onChanged: { addListener: (cb) => onStorage.push(cb) }
+    },
+    runtime: { onMessage: { addListener: () => {} }, sendMessage: async () => ({}) }
+  };
+  for (const f of ["src/shared/defaults.js", "src/shared/settings.js", "src/content/bidi.js", "src/content/rules.js", "src/content/entry.js"]) {
+    window.eval(read(f));
+  }
+  await new Promise((r) => setTimeout(r, 80));
+
+  const md = window.document.querySelector(".ds-markdown");
+  assert.ok(md, "ds-markdown found");
+  assert.ok(md.classList.contains("pc-block"), "markdown container decorated");
+  assert.ok(md.classList.contains("pc-persian"), "markdown container = persian");
+  assert.strictEqual(md.getAttribute("dir"), "rtl", "markdown container dir=rtl (direction fix)");
+
+  const code = window.document.querySelector(".ds-markdown code");
+  assert.ok(code, "code element found");
+  assert.ok(!code.classList.contains("pc-block"), "code stays protected");
+
+  console.log("✔ deepseek layout test passed — .ds-markdown container gets dir=rtl");
+}
+
+(async function run() {
+  await main();
+  await testDeepSeekLayout();
+})().catch((err) => {
   console.error("✘ smoke test failed");
   console.error(err);
   process.exit(1);
