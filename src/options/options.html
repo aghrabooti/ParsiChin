@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تنظیمات ParsiChin</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <header class="page-header">
+    <img class="logo" src="../../assets/icons/icon128.png" alt="ParsiChin" />
+    <div>
+      <h1>تنظیمات ParsiChin</h1>
+      <p class="subtitle">نمایش بهتر متن‌های تلفیقی فارسی و انگلیسی در وب‌پیج‌های هوش مصنوعی</p>
+    </div>
+    <label class="switch big" title="فعال / غیرفعال">
+      <input type="checkbox" id="opt-enabled" />
+      <span class="slider"></span>
+    </label>
+  </header>
+
+  <main class="layout">
+    <!-- ====================== مصور / کنترل‌ها ====================== -->
+    <section class="controls">
+      <div class="card">
+        <h2>روش تشخیص</h2>
+        <label class="row">
+          <span>
+            <strong>روش اعمال</strong>
+            <small>خودکار فقط بلوک‌های فارسی را تغییر می‌دهد؛ «همیشه» همه‌ی بلوک‌های گفتگو را پوشش می‌دهد.</small>
+          </span>
+          <select id="opt-applyMode">
+            <option value="auto">خودکار (فقط فارسی)</option>
+            <option value="always">همیشه (همه‌ی بلوک‌ها)</option>
+          </select>
+        </label>
+
+        <label class="row">
+          <span>
+            <strong>فونت فارسی</strong>
+            <small>فونت وزیرمتن به‌صورت آفلاین همراه افزونه است؛ «فونت سایت» از همان فونت صفحه استفاده می‌کند.</small>
+          </span>
+          <select id="opt-fontFamily">
+            <option value="vazirmatn">وزیرمتن (همراه افزونه)</option>
+            <option value="system">فونت سایت</option>
+          </select>
+        </label>
+
+        <label class="row">
+          <span>
+            <strong>اندازه‌ی متن</strong>
+            <output id="opt-fontSize-value">100%</output>
+          </span>
+          <input type="range" id="opt-fontSize" min="85" max="130" step="5" />
+        </label>
+
+        <label class="row">
+          <span>
+            <strong>فاصله‌ی خطوط</strong>
+            <small>خط فارسی برای خوانایی به فاصله‌ی بیشتری نیاز دارد.</small>
+          </span>
+          <input type="range" id="opt-lineHeight" min="1.5" max="2.4" step="0.1" />
+        </label>
+
+        <label class="row">
+          <span>
+            <strong>ضخامت قلم</strong>
+          </span>
+          <select id="opt-fontWeight">
+            <option value="400">معمولی</option>
+            <option value="500">نیمه‌ضخیم</option>
+            <option value="700">ضخیم</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="card">
+        <h2>ترتیب و جهت متن</h2>
+        <label class="row switch-row">
+          <span>
+            <strong>عادی‌سازی علائم نگارشی</strong>
+            <small>آزمایشی: «سلام, دنیا» به «سلام، دنیا» تبدیل می‌شود. ممکن است با React/Vue تداخل کند.</small>
+          </span>
+          <input type="checkbox" id="opt-punctuationNormalization" />
+        </label>
+        <label class="row switch-row">
+          <span>
+            <strong>کدها همیشه چپ‌به‌راست</strong>
+            <small>بلوک‌های کد و <code>&lt;pre&gt;</code> با فونت monospace و جهت LTR می‌مانند.</small>
+          </span>
+          <input type="checkbox" id="opt-keepCodeLtr" />
+        </label>
+      </div>
+
+      <div class="card">
+        <h2>سایت‌ها</h2>
+        <div class="block">
+          <label class="switch-row">
+            <span>
+              <strong>فعال‌سازی در همه‌ی سایت‌ها</strong>
+              <small>به دسترسی «همه‌ی سایت‌ها» نیاز دارد (اختیاری).</small>
+            </span>
+            <input type="checkbox" id="opt-allSites" />
+          </label>
+          <p class="hint" id="allSitesHint" hidden>
+            ⚠️ دسترسی «همه‌ی سایت‌ها» رد شد — این حالت بدون آن کار نمی‌کند.
+          </p>
+        </div>
+
+        <div class="block">
+          <label for="opt-customSites"><strong>سایت‌های دلخواه</strong></label>
+          <small>هر دامنه در یک خط، بدون https (مثال: <code>copilot.microsoft.com</code>)</small>
+          <textarea id="opt-customSites" rows="3" spellcheck="false"
+            placeholder="example.com&#10;chat.example.org"></textarea>
+        </div>
+
+        <div class="block">
+          <strong>سایت‌های شناخته‌شده</strong>
+          <small>برای غیرفعال کردن موقت یک سایت، تیک آن را بردارید.</small>
+          <div id="siteList" class="site-list"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>پشتیبان‌گیری</h2>
+        <div class="btn-row">
+          <button class="btn" id="exportBtn">خروجی JSON</button>
+          <button class="btn" id="importBtn">ورودی JSON</button>
+          <input type="file" id="importFile" accept="application/json" hidden />
+          <button class="btn danger" id="resetBtn">بازنشانی به پیش‌فرض</button>
+        </div>
+        <p class="hint" id="statusLine" hidden></p>
+      </div>
+    </section>
+
+    <!-- ====================== پیش‌نمایش زنده ====================== -->
+    <aside class="preview">
+      <div class="card sticky">
+        <h2>پیش‌نمایش زنده</h2>
+        <div id="preview" class="preview-box">
+          <p class="pc-block pc-persian" dir="rtl">
+            سلام! این یک <strong>متن ترکیبی</strong> است: جمله‌ی فارسی با کلمات انگلیسی مثل
+            <em>Prompt</em> و <em>Model</em> در وسط آن. تغییرات را اینجا ببینید.
+          </p>
+          <p class="pc-block pc-mixed">
+            Here is an English sentence, but it also contains فارسی و اعداد ۱۲۳ مثل این.
+          </p>
+          <pre class="pc-block">def greet(name):\n    print("سلام، " + name)</pre>
+        </div>
+
+        <h3>توضیح</h3>
+        <p class="hint">
+          افزونه فقط روی بلوک‌های گفتگو (مثل <code>&lt;p&gt;</code>) اثر می‌گذارد؛ فرم‌ها، چت‌باکس
+          و کدها دست‌نخورده می‌مانند. این پیش‌نمایش فقط برای تنظیم فونت، اندازه و فاصله است.
+        </p>
+      </div>
+    </aside>
+  </main>
+
+  <script src="../shared/defaults.js"></script>
+  <script src="../shared/settings.js"></script>
+  <script src="../content/bidi.js"></script>
+  <script src="../content/rules.js"></script>
+  <script src="../shared/i18n.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
