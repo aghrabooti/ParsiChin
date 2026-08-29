@@ -202,6 +202,12 @@ async function testDeepSeekLayout() {
   assert.ok(md.classList.contains("pc-block"), "markdown container decorated");
   assert.ok(md.classList.contains("pc-persian"), "markdown container = persian");
   assert.strictEqual(md.getAttribute("dir"), "rtl", "markdown container dir=rtl (direction fix)");
+  assert.strictEqual(md.style.getPropertyValue("direction"), "rtl",
+    "inline direction set (beats site CSS)");
+  assert.strictEqual(md.style.getPropertyValue("text-align"), "right",
+    "inline text-align right set");
+  assert.strictEqual(md.style.getPropertyPriority("direction"), "important",
+    "inline direction is !important");
 
   const code = window.document.querySelector(".ds-markdown code");
   assert.ok(code, "code element found");
@@ -210,9 +216,57 @@ async function testDeepSeekLayout() {
   console.log("✔ deepseek layout test passed — .ds-markdown container gets dir=rtl");
 }
 
+/**
+ * Mostly-Latin sentence with a lot of Persian words (ratio ~0.3-0.5) must be
+ * RTL too — previously it was "mixed" and stayed left-aligned.
+ */
+async function testMixedFarsiBlock() {
+  const html = `<!DOCTYPE html><html><body><main>
+    <div id="m">
+      <p id="mixedFarsi">مدل زبانی با استفاده از Transformer و Attention و Fine-tuning پاسخ می‌دهد و خروجی را بهبود می‌دهد</p>
+    </div>
+  </main></body></html>`;
+
+  const dom = new JSDOM(html, {
+    url: "https://chat.deepseek.com/a/chat/s/1",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  const { window } = dom;
+  const store = {};
+  const onStorage = [];
+  window.chrome = {
+    storage: {
+      local: {
+        get: async (k) => ({ [k]: store.parsiChinSettings }),
+        set: async (o) => { Object.assign(store, o); }
+      },
+      onChanged: { addListener: (cb) => onStorage.push(cb) }
+    },
+    runtime: { onMessage: { addListener: () => {} }, sendMessage: async () => ({}) }
+  };
+  for (const f of ["src/shared/defaults.js", "src/shared/settings.js", "src/content/bidi.js", "src/content/rules.js", "src/content/entry.js"]) {
+    window.eval(read(f));
+  }
+  await new Promise((r) => setTimeout(r, 80));
+
+  const p = window.document.getElementById("mixedFarsi");
+  assert.ok(p.classList.contains("pc-persian"), "mostly-Persian-with-English = persian now");
+  assert.strictEqual(p.getAttribute("dir"), "rtl", "mixed-farsi paragraph dir=rtl");
+  assert.strictEqual(p.style.getPropertyValue("direction"), "rtl", "inline rtl set");
+
+  // cleanup must restore inline styles
+  onStorage.forEach((cb) => cb({ parsiChinSettings: { newValue: { enabled: false } } }, "local"));
+  await new Promise((r) => setTimeout(r, 40));
+  assert.strictEqual(p.style.getPropertyValue("direction"), "", "inline direction restored on cleanup");
+
+  console.log("✔ mixed-farsi test passed — mostly-Persian text is forced RTL");
+}
+
 (async function run() {
   await main();
   await testDeepSeekLayout();
+  await testMixedFarsiBlock();
 })().catch((err) => {
   console.error("✘ smoke test failed");
   console.error(err);
