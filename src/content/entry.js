@@ -33,10 +33,33 @@
   let rootEl = null;
   let observer = null;
   let observerTarget = null;
+  const requestedFonts = new Set();
 
   function isProtected(el) {
     return el.matches(rules().SKIP_SELECTOR) ||
       !!el.closest("input, textarea, select, [contenteditable='true'], [role='textbox']");
+  }
+
+  /* ---------------- block detection ---------------- */
+
+  /**
+   * "Markdown container" selectors per site (e.g. DeepSeek renders the whole
+   * assistant message inside <div class="ds-markdown"> which holds NO direct
+   * text — only child elements). Those containers must be decorated too,
+   * otherwise direction never reaches the message text.
+   */
+  function markdownSelectors() {
+    const rule = rules().ruleForHost(location.hostname);
+    return (rule && rule.blockSelectors) || [];
+  }
+
+  function isBlockCandidate(el) {
+    if (rules().isTextBlock(el)) return true;
+    const extras = markdownSelectors();
+    for (let i = 0; i < extras.length; i++) {
+      if (el.matches(extras[i])) return true;
+    }
+    return false;
   }
 
   /* ---------------- dir state preservation ---------------- */
@@ -60,6 +83,37 @@
 
   /* ---------------- base CSS variables ---------------- */
 
+  /**
+   * Content-stylesheet URLs are resolved relative to the host page. Load
+   * bundled fonts through the extension URL instead, so sites such as
+   * DeepSeek never receive a request for /fonts/Vazirmatn-*.woff2.
+   */
+  function loadBundledFonts() {
+    if (typeof FontFace !== "function" || !document.fonts ||
+        !chrome.runtime || typeof chrome.runtime.getURL !== "function") return;
+
+    [
+      ["styles/fonts/Vazirmatn-Regular.woff2", "400"],
+      ["styles/fonts/Vazirmatn-Medium.woff2", "500"],
+      ["styles/fonts/Vazirmatn-Bold.woff2", "700"]
+    ].forEach(function (font) {
+      const path = font[0];
+      if (requestedFonts.has(path)) return;
+      requestedFonts.add(path);
+
+      const face = new FontFace(
+        "ParsiChin Vazirmatn",
+        "url(" + JSON.stringify(chrome.runtime.getURL(path)) + ") format('woff2')",
+        { weight: font[1], style: "normal", display: "swap" }
+      );
+      face.load().then(function (loadedFace) {
+        document.fonts.add(loadedFace);
+      }).catch(function () {
+        // Keep the system-font fallback when a browser declines a font load.
+      });
+    });
+  }
+
   function applyBaseVariables(settings) {
     const html = document.documentElement;
     html.classList.add("parsi-chin-active");
@@ -68,6 +122,7 @@
     html.style.setProperty("--pc-font-weight", String(settings.fontWeight));
     html.classList.toggle("pc-font-vazirmatn", settings.fontFamily === "vazirmatn");
     html.classList.toggle("pc-code-ltr", settings.keepCodeLtr !== false);
+    if (settings.fontFamily === "vazirmatn") loadBundledFonts();
   }
 
   function removeBaseVariables() {
@@ -85,10 +140,13 @@
   /** Decorate a single text block (idempotent per element). */
   function decorate(el, settings) {
     if (!(el instanceof Element) || isProtected(el)) return;
-    if (!rules().isTextBlock(el)) return;
+    if (!isBlockCandidate(el)) return;
 
     const text = el.textContent || "";
     if (text.trim().length < 2) return;
+    // Never flip giant containers (the whole #app / page wrapper): such
+    // elements are scan roots, not text blocks.
+    if (text.length > 30000) return;
 
     const info = bidi().classify(text);
     if (info.kind === "none" && settings.applyMode !== "always") return;
@@ -122,7 +180,7 @@
    */
   function refresh(el) {
     if (!(el instanceof Element) || isProtected(el)) return;
-    if (!rules().isTextBlock(el) || !currentSettings) return;
+    if (!isBlockCandidate(el) || !currentSettings) return;
     const info = bidi().classify(el.textContent || "");
     if (info.kind === "none") return;
     if (!el.classList.contains("pc-block")) {
@@ -171,12 +229,24 @@
 
     let root = null;
     if (rule) {
-      // "main, .a, .b" -> pick the largest match.
+      // "main, .a, .b" -> prefer the NARROWEST candidate that really contains
+      // content; fall back to the largest one (e.g. #app) only when nothing
+      // else matched. Scanning #app as the root is fine, decorating it is not.
       const candidates = rule.root.split(",").map(function (s) { return s.trim(); });
+      let narrow = null;
+      let narrowLen = Infinity;
+      let largest = null;
       for (const sel of candidates) {
         const el = document.querySelector(sel);
-        if (el && (!root || el.textContent.length > root.textContent.length)) root = el;
+        if (!el) continue;
+        const len = el.textContent.length;
+        if (!largest || len > largest.textContent.length) largest = el;
+        if (len >= 200 && len <= 120000 && len < narrowLen) {
+          narrow = el;
+          narrowLen = len;
+        }
       }
+      root = narrow || largest;
     }
     if (!root && settings.allSites) {
       root = document.querySelector("main, article, [role='main']");
@@ -195,10 +265,26 @@
     applyBaseVariables(settings);
     rootEl = resolveRoot(settings);
     if (rootEl) walk(rootEl, settings);
+    logStats();
 
     // IMPORTANT: observer must be (re)scheduled on every enable, not only at
     // boot — cleanup() disconnects it when the user toggles the extension off.
     scheduleRefresh();
+  }
+
+  function logStats() {
+    let persian = 0;
+    let mixed = 0;
+    decorated.forEach(function (el) {
+      if (el.classList.contains("pc-persian")) persian++;
+      else mixed++;
+    });
+    console.debug(
+      "[ParsiChin] active · root=" +
+      (rootEl ? rootEl.tagName.toLowerCase() + "." + String(rootEl.className).split(" ").join(".") : "none") +
+      " · blocks=" + decorated.size +
+      " (persian=" + persian + ", mixed=" + mixed + ")"
+    );
   }
 
   /** Undo everything we added (used when the user disables the extension). */

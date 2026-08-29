@@ -155,7 +155,65 @@ async function main() {
   console.log("✔ smoke test passed — content script works in a simulated DOM");
 }
 
-main().catch((err) => {
+/**
+ * DeepSeek-like layout: assistant messages are <div class="ds-markdown">
+ * with NO direct text (only child p/div elements), mounted under #app.
+ * The markdown container itself must still get dir=rtl.
+ */
+async function testDeepSeekLayout() {
+  const html = `<!DOCTYPE html><html><body>
+    <div id="app">
+      <div class="chat-container">
+        <div class="ds-markdown">
+          <div class="paragraph">
+            <p>پاسخ دیپ‌سیک به زبان فارسی با مثال و کد</p>
+          </div>
+          <pre><code>print("سلام")</code></pre>
+        </div>
+      </div>
+    </div>
+  </body></html>`;
+
+  const dom = new JSDOM(html, {
+    url: "https://chat.deepseek.com/a/chat/s/123",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  const { window } = dom;
+  const store = {};
+  const onStorage = [];
+  window.chrome = {
+    storage: {
+      local: {
+        get: async (k) => ({ [k]: store.parsiChinSettings }),
+        set: async (o) => { Object.assign(store, o); }
+      },
+      onChanged: { addListener: (cb) => onStorage.push(cb) }
+    },
+    runtime: { onMessage: { addListener: () => {} }, sendMessage: async () => ({}) }
+  };
+  for (const f of ["src/shared/defaults.js", "src/shared/settings.js", "src/content/bidi.js", "src/content/rules.js", "src/content/entry.js"]) {
+    window.eval(read(f));
+  }
+  await new Promise((r) => setTimeout(r, 80));
+
+  const md = window.document.querySelector(".ds-markdown");
+  assert.ok(md, "ds-markdown found");
+  assert.ok(md.classList.contains("pc-block"), "markdown container decorated");
+  assert.ok(md.classList.contains("pc-persian"), "markdown container = persian");
+  assert.strictEqual(md.getAttribute("dir"), "rtl", "markdown container dir=rtl (direction fix)");
+
+  const code = window.document.querySelector(".ds-markdown code");
+  assert.ok(code, "code element found");
+  assert.ok(!code.classList.contains("pc-block"), "code stays protected");
+
+  console.log("✔ deepseek layout test passed — .ds-markdown container gets dir=rtl");
+}
+
+(async function run() {
+  await main();
+  await testDeepSeekLayout();
+})().catch((err) => {
   console.error("✘ smoke test failed");
   console.error(err);
   process.exit(1);

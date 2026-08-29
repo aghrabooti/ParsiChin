@@ -80,7 +80,12 @@
       id: "deepseek",
       name: "DeepSeek",
       sites: ["deepseek.com"],
-      root: "main, .ds-chat"
+      // DeepSeek's current SPA mounts the conversation below #app and does
+      // not consistently expose a <main> or .ds-chat element. The real text
+      // lives inside .ds-markdown containers (no direct text, only child
+      // elements), so we treat them as blocks too (see entry.js).
+      root: "main, .ds-chat, #app",
+      blockSelectors: [".ds-markdown", "[class*='ds-markdown']"]
     },
     {
       id: "copilot",
