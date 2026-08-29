@@ -35,15 +35,17 @@ html.parsi-chin-active.pc-font-vazirmatn .pc-block {
 
 /* Persian-first paragraphs: force RTL + right alignment. */
 .parsi-chin-active .pc-block.pc-persian {
-  direction: rtl;
-  text-align: right;
+  /* Chat UIs frequently set direction/text-align on message wrappers.
+     These must win for a block the extension explicitly classified as RTL. */
+  direction: rtl !important;
+  text-align: right !important;
 }
 
 /* Truly mixed / mostly-Latin blocks: let the browser resolve direction
    per paragraph from the first strong character. */
 .parsi-chin-active .pc-block.pc-mixed {
-  unicode-bidi: plaintext;
-  text-align: start;
+  unicode-bidi: plaintext !important;
+  text-align: start !important;
 }
 
 /* Children should follow the block's font metrics. */
