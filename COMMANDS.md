@@ -41,7 +41,7 @@ cd ParsiChin
 # ------------------------------------------------------------------
 # git clone https://github.com/aghrabooti/ParsiChin.git && cd ParsiChin
 # git checkout main && git checkout -b rtl-fix
-# git am --3way ../ParsiChin-v0.2.0.patch
+# git -c user.name=me -c user.email=me@example.com am --3way ../ParsiChin-v0.2.0.patch
 
 # ------------------------------------------------------------------
 # 6) install, test, build
@@ -72,3 +72,6 @@ Notes
   directly via chrome://extensions → Developer mode → Load unpacked.
 * Patches are binary-safe (`git format-patch --binary`), so `git am` reproduces the
   screenshots in `docs/img/` byte for byte.
+* `git am` needs a committer identity on a fresh machine; either set one
+  (`git config user.name ...` / `git config user.email ...`) or use the
+  `-c user.name=... -c user.email=...` form shown in step 5.
