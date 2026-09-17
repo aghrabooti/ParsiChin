@@ -109,7 +109,8 @@ extension ID never change, so existing users update automatically.
 ## 8 · What reviewers look at for this extension
 
 * **Single purpose** — "adjust Persian text direction on chat pages". Keep the listing language that
-  narrow; do not describe it as a general translator or chat client.
+  narrow; do not describe it as a general translator or chat client. The "enable on this site" button
+  is part of that single purpose: it applies the same adjustment to a page the user explicitly picks.
 * **No remote code** — the package is self-contained; the bundled Vazirmatn fonts are in `styles/fonts/`.
 * **Justified permissions** — `storage`, `scripting`, `tabs` and the *optional* `*://*/*`; the built-in
   content script matches only the ten listed AI chat hosts.

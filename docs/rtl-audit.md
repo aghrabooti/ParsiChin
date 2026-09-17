@@ -9,8 +9,8 @@ in v0.2.0, and how to verify it yourself in a real browser.
 
 | build | probes | failing |
 | --- | --- | --- |
-| v0.1.0 (`HEAD`) | 114 | **35** |
-| v0.2.0 (fixed) | 114 | **0** |
+| v0.1.0 (`HEAD`) | 136 | **48** |
+| v0.2.0 (fixed) | 136 | **0** |
 
 (95 probes were measured before the `missing-root` scenario was added: 22 failing then, 0 after.)
 
@@ -51,6 +51,8 @@ scenarios:
 | `site-css-ltr` | site hard-codes `direction: ltr` on message bodies |
 | `site-css-ltr-important` | site hard-codes `direction: ltr !important` |
 | `missing-root` | the rule's container does not exist (no `<main>`, no `#app`) — the shape of DeepSeek's current build |
+| `unknown-host-all-sites` | a host with no rule at all (`example.com`, no container) with "all sites" on — 13 of 19 probes failed before this work, 0 now |
+| `unknown-host-english` | the same kind of host with an English-only page: nothing may be decorated |
 | `native-rtl-page` | a page that is already RTL |
 
 Each probe is measured two ways so the result cannot be argued with:

@@ -15,6 +15,10 @@ Works on Chrome, Edge, Brave, Vivaldi, Opera and any other Chromium browser.
    `Ctrl/Cmd+Shift+R`. Click the toolbar icon to check: the popup reports how many text blocks were
    adjusted on that page.
 
+**Want it on a site that is not in the list?** Open that site and click the toolbar icon:
+**Enable on this site** fixes the current page instantly (no reload, Chrome asks only for that one
+origin). **Enable on all sites** turns the mode on everywhere. Both can be undone in the options page.
+
 ### Updating
 
 1. Download the new build zip, unzip it over the same folder (replace the files).

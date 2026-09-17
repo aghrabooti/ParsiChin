@@ -37,6 +37,10 @@ The result is the familiar zig-zag, uneven margins and words that appear to be m
 * **Safe by default** — code blocks, forms and chat inputs are never touched; numbers-only and code-only
   blocks are left alone; disabling the extension restores the page exactly (including a `dir` attribute
   the site had set itself).
+* **Works on every site, with one click.** The ten AI chat sites are built in. On any other page the
+  popup offers **"Enable on this site"** (asks Chrome for that one origin, then injects the script
+  immediately — no reload) or **"Enable on all sites"**. Either way you can switch a single site back
+  off from the options page.
 * **Keeps working when a site is redesigned** — if the known container is gone, the scan falls
   back to generic containers and finally to `<body>`, instead of silently doing nothing.
 * **Diagnostics** — `ParsiChin.reportJson()` in the page console explains what happened on the

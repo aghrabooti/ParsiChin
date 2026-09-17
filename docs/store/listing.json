@@ -15,7 +15,7 @@
     "• English stays left-to-right — even inside a Persian answer, and even when a site forces direction: ltr !important on its own containers.",
     "• List bullets, table cells and multi-line paragraphs follow their own text instead of the page.",
     "• Optional Persian-friendly font (Vazirmatn, bundled — no downloads at runtime) with adjustable size.",
-    "• Per-site control: the ten supported AI chat sites work out of the box, and you can add any other site yourself.",
+    "• Per-site control: the ten supported AI chat sites work out of the box, and any other page can be enabled with one click from the popup — either just that site or every site.",
     "• “All sites” mode requests the additional permission only when you switch it on.",
     "",
     "HOW IT WORKS",

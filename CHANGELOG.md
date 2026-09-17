@@ -47,6 +47,20 @@ Fixes every defect found by the new browser audit; the same fixture fails **35 â
      specificity than `.pc-rtl` could still win. Decorated blocks now also get an inline
      `direction`/`text-align` with `!important` (inline `!important` beats every author rule),
      and the element's own original `dir` **and** inline values are restored on cleanup.
+* **"Works on every site" is now a one-click flow.** Any page can be enabled from the popup:
+  **Enable on this site** requests only that origin (`https://host/*`, a subset of the declared
+  optional patterns) and injects the content script into the open tab immediately, so the text is
+  fixed without a reload; **Enable on all sites** requests the full pattern and switches the mode on.
+  Both are reflected in the options page, where a single site can be switched back off.
+* **A site switched off in the options page no longer breaks the page.** `hostMatchesRule()` expected
+  an array of sites but the override checks passed a single hostname, so the first `?`-off entry threw
+  `sites.some is not a function` inside the content script and aborted the whole scan. It now accepts
+  both shapes, strips `*.`/`www.` and lowercases, and a per-site fix now also overrides "all sites"
+  mode (previously it was only honoured for hosts that had a built-in rule).
+* **Guard rails for unfamiliar pages.** Walking a foreign page is budgeted: at most 20 000 visited
+  elements and 3 000 decorated blocks per scan, and a page whose text contains no Persian letters at
+  all is skipped before the walk starts (the observer stays attached, so Persian that arrives later is
+  still handled). This keeps "all sites" mode from costing anything on Latin-only pages.
 * **The live server is now a real site.** `/` is an overview page (what was broken, the numbers,
   every bundle with size and sha256, quick start), `/download/` lists every deliverable with
   checksums and absolute URLs, and the lab moved to its own page. Both pages and the lab share one

@@ -291,8 +291,8 @@ function landing(ctx) {
     "</div>\n" +
     '<div class="stats">' +
       '<div class="stat good"><b>0</b><span>failing probes after the fix</span></div>' +
-      '<div class="stat bad"><b>22 → 0</b><span>before → after (audit)</span></div>' +
-      '<div class="stat accent"><b>114</b><span>audit probes, 6 scenarios</span></div>' +
+      '<div class="stat bad"><b>48 → 0</b><span>before → after (audit)</span></div>' +
+      '<div class="stat accent"><b>136</b><span>audit probes, 8 scenarios</span></div>' +
       '<div class="stat"><b>v0.2.0</b><span>extension build in <code>/dist</code></span></div>' +
     "</div>\n" +
     "</section>\n" +
@@ -302,6 +302,25 @@ function landing(ctx) {
     '<span class="sec-sub">Seven defects, all reproduced in a headless browser before being fixed. ' +
     "The audit is <code>docs/rtl-audit.md</code>; the before/after dumps are the JSON files next to it.</span></div>\n" +
     '<div class="grid two">\n' + causes + "\n</div>\n" +
+    "</section>\n" +
+
+    '<section class="sec" id="anywhere">\n' +
+    '<div class="sec-head"><h2>Works on any site</h2>' +
+    '<span class="sec-sub">Ten AI chat sites are built in. Everything else is one click away.</span></div>\n' +
+    '<div class="grid three">\n' +
+      '<div class="card"><h3>1 · Open the page you want</h3><p>Any page with Persian text — a forum, a ' +
+        "docs site, an internal tool. The popup notices that the page is not in the built-in list and " +
+        "offers to enable it.</p></div>\n" +
+      '<div class="card"><h3>2 · Click “Enable on this site”</h3><p>Chrome asks for that single origin ' +
+        "(<code>https://that-site/*</code>) and the text is fixed <strong>immediately</strong> — no " +
+        "reload. “Enable on all sites” does the same for every page.</p></div>\n" +
+      '<div class="card"><h3>3 · Switch anything back off</h3><p>The options page lists every site you ' +
+        "enabled and takes a single one back out, even while “all sites” is on.</p></div>\n" +
+    "</div>\n" +
+    '<p class="note" style="margin-top:12px">Measured in a real browser: on a host the extension has ' +
+    "never seen, with “all sites” on and no known container, <strong>19 of 19</strong> probes pass " +
+    "(13 failed with the pre-fix code). An English-only page on such a host is left completely " +
+    "untouched.</p>\n" +
     "</section>\n" +
 
     '<section class="sec" id="files">\n' +
