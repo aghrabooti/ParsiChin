@@ -13,6 +13,8 @@ ebe6ac0  fix(rtl): decide one direction per block from content, not dir=auto
 9923457  docs(rtl): root-cause audit, screenshots and English docs
 99d59f2  chore(release): v0.2.0
 (base: 9f5fa71 "test(smoke): enhance smoke tests for DeepSeek layout and Persian text handling")
+plus one follow-up housekeeping commit that records these hashes and adds
+ParsiChin-*.zip / ParsiChin-*.patch to .gitignore.
 
 The same five commits are available as a reviewable patch file:
   ParsiChin-v0.2.0.patch   (git format-patch --binary 9f5fa71..HEAD)
