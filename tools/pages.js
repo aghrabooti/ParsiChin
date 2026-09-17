@@ -340,6 +340,34 @@ function landing(ctx) {
     "</div>\n" +
     "</section>\n" +
 
+    '<section class="sec" id="free">\n' +
+    '<div class="sec-head"><h2>Install without a store — free</h2>' +
+    '<span class="sec-sub">No developer account, no $5 fee, no review. The build on this page is the ' +
+    "same code the store would get.</span></div>\n" +
+    '<div class="grid two">\n' +
+      '<div class="card"><ol class="steps">' +
+        "<li>Download <code>dist/parsi-chin-v0.2.0.zip</code> and <strong>unzip</strong> it to a folder you keep " +
+        "(the browser loads the extension from that folder, so do not delete it).</li>" +
+        "<li>Open <code>chrome://extensions</code> and switch on <strong>Developer mode</strong>.</li>" +
+        "<li><strong>Load unpacked</strong> → choose the unzipped folder (the one with <code>manifest.json</code>).</li>" +
+        "<li>Hard-reload the chat site: <code>Ctrl/Cmd+Shift+R</code>.</li>" +
+        "</ol>" +
+        '<p class="note" style="margin-top:10px">To update later: unzip the new build over the same folder, ' +
+        "click <strong>⟳ Reload</strong> on the extension card, then hard-reload the site. Full guide: " +
+        '<a href="/INSTALL.md">INSTALL.md</a>.</p></div>\n' +
+      '<div class="card"><h3>Free vs. store</h3>' +
+        '<div class="table-wrap" style="border:0"><table><thead><tr><th></th><th>unpacked</th><th>store</th></tr></thead><tbody>' +
+        "<tr><td>cost</td><td><strong>free</strong></td><td>$5 once per developer account</td></tr>" +
+        "<tr><td>install</td><td>6 manual steps</td><td>one click</td></tr>" +
+        "<tr><td>updates</td><td>manual</td><td>automatic</td></tr>" +
+        "<tr><td>warning</td><td>“Disable developer mode extensions” after a restart</td><td>none</td></tr>" +
+        "</tbody></table></div>" +
+        '<p class="note" style="margin-top:10px"><strong>Edge Add-ons is free</strong> and takes the same zip — ' +
+        "one-click installs for Edge users. Chrome one-click installs without paying do not exist. " +
+        'Publishing guide: <a href="/STORE.md">STORE.md</a>.</p></div>\n' +
+    "</div>\n" +
+    "</section>\n" +
+
     '<section class="sec" id="report">\n' +
     '<div class="sec-head"><h2>Still left-to-right somewhere?</h2>' +
     '<span class="sec-sub">The extension can tell you why, per page.</span></div>\n' +
@@ -366,6 +394,7 @@ function landing(ctx) {
       linkCard("demo/legacy/", "The v0.1.0 content script kept around so the lab can prove the old defects.") +
       linkCard("STORE.md", "Publishing guide: the upload package, listing copy, permission justifications, review notes.") +
       linkCard("PRIVACY.md", "Privacy policy to link from the store listing — nothing is collected, no network calls.") +
+      linkCard("INSTALL.md", "Free install and update guide (unpacked build), plus the free vs. store comparison.") +
       linkCard("docs/store/", "Store graphics: three 1280×800 screenshots, 440×280 promo tile, 1400×560 marquee.") +
     "</div></div>\n" +
     "</section>\n";
@@ -441,7 +470,9 @@ function downloads(ctx) {
     "</section>\n" +
 
     '<section class="sec">\n' +
-    '<div class="sec-head"><h2>Install the extension</h2></div>\n' +
+    '<div class="sec-head"><h2>Install the extension</h2>' +
+    '<span class="sec-sub">No store needed — this is the free route. Details: ' +
+    '<a href="/INSTALL.md">INSTALL.md</a>.</span></div>\n' +
     '<div class="grid two">\n' +
       '<div class="card"><ol class="steps">' +
         "<li>Download <code>dist/parsi-chin-v0.2.0.zip</code> and unzip it.</li>" +
