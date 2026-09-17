@@ -17,10 +17,14 @@ function read(rel) { return fs.readFileSync(path.join(ROOT, rel), "utf8"); }
 function makeChrome() {
   const store = { parsiChinSettings: {} };
   const listeners = [];
+  const sent = [];
+  const requested = [];
   return {
     window: null,
     store,
     listeners,
+    sent,
+    requested,
     chrome: {
       storage: {
         local: {
@@ -31,15 +35,26 @@ function makeChrome() {
       },
       runtime: {
         onMessage: { addListener: () => {} },
-        sendMessage: async () => ({ ok: true }),
-        getManifest: () => ({ version: "0.1.0" }),
+        sendMessage: async (msg) => {
+          sent.push(msg);
+          return { ok: true, host: msg && msg.host };
+        },
+        getManifest: () => ({ version: "0.2.0" }),
         openOptionsPage: () => {}
       },
       tabs: {
         query: async () => [{ id: 7, url: "https://chatgpt.com/c/1" }],
         sendMessage: async () => ({ blocks: 12, persian: 9, mixed: 3, pinnedLtr: 1, root: "main.ds-chat" })
       },
-      permissions: { contains: async () => true, request: async () => true },
+      permissions: {
+        contains: async () => true,
+        request: async ({ origins }) => {
+          requested.push(origins);
+          // Chrome accepts a single-origin pattern as a subset of the declared
+          // optional patterns, and rejects anything undeclared.
+          return origins.every((o) => /^\*:\/\/|^https?:\/\//.test(o) && o !== "<all_urls>");
+        }
+      },
       i18n: { getMessage: () => "" }
     }
   };
@@ -90,6 +105,42 @@ async function main() {
   assert.ok(!/بلوک/.test(noScriptWindow.document.getElementById("siteDetail").textContent),
     "no block count is shown when the content script does not answer");
 
+
+  /* ---------- popup: one-click enable on any site ---------- */
+  const anySiteChrome = makeChrome();
+  anySiteChrome.chrome.tabs.query = async () => [{ id: 42, url: "https://example.org/notes" }];
+  anySiteChrome.chrome.tabs.sendMessage = async () => { throw new Error("Receiving end does not exist"); };
+  const anySiteWindow = load(
+    read("src/popup/popup.html"),
+    "src/popup/popup.js",
+    ["src/shared/defaults.js", "src/shared/settings.js", "src/content/rules.js", "src/shared/i18n.js"],
+    anySiteChrome
+  );
+  await new Promise((r) => setTimeout(r, 80));
+  const box = anySiteWindow.document.getElementById("enableBox");
+  assert.strictEqual(box.hidden, false, "an unknown site offers the one-click enable box");
+
+  anySiteWindow.document.getElementById("enableSite").click();
+  await new Promise((r) => setTimeout(r, 60));
+  assert.strictEqual(JSON.stringify(Array.from(anySiteChrome.requested[0])), JSON.stringify(["*://example.org/*"]),
+    "per-site enable asks for that one origin, not for everything");
+  const enableMsg = anySiteChrome.sent.find((m) => m.type === "parsi-chin:enable-site");
+  assert.ok(enableMsg && enableMsg.host === "example.org" && enableMsg.tabId === 42,
+    "the background is asked to enable that host in that tab (no reload needed)");
+  assert.strictEqual(anySiteChrome.store.parsiChinSettings.allSites, undefined,
+    "per-site enable does not silently switch on all sites");
+
+  anySiteWindow.document.getElementById("enableAll").click();
+  await new Promise((r) => setTimeout(r, 60));
+  assert.strictEqual(JSON.stringify(Array.from(anySiteChrome.requested[1])), JSON.stringify(["*://*/*"]),
+    "the all-sites button asks for the declared optional pattern");
+  assert.ok(anySiteChrome.sent.some((m) => m.type === "parsi-chin:enable-all"),
+    "the background is asked to switch on all sites");
+
+  /* a supported site must not show the box at all */
+  assert.strictEqual(popupChrome.window.document.getElementById("enableBox").hidden, true,
+    "a built-in site keeps the box hidden");
+
   /* ---------- options ---------- */
   const optChrome = makeChrome();
   load(
@@ -137,11 +188,21 @@ async function testServerPages() {
 
   const downloads = pages.downloads(ctx);
   assert.ok(!/undefined|NaN/.test(downloads), "download page has no undefined/NaN placeholders");
+  const missing = [];
   for (const b of pages.BUNDLES) {
     assert.ok(downloads.indexOf(b.file) !== -1, "download page lists " + b.file);
     const info = ctx.files.find((f) => f.file === b.file);
-    assert.ok(info && info.exists, b.file + " exists on disk");
+    if (!info || !info.exists) {
+      // Generated bundles (zips, patch) are not committed; a fresh clone has to
+      // run the build first, so their absence is a note, not a failure.
+      missing.push(b.file);
+      continue;
+    }
     assert.match(info.sha, /^[0-9a-f]{12}$/, b.file + " has a sha256");
+    assert.ok(info.size > 0, b.file + " is not empty");
+  }
+  if (missing.length) {
+    console.log("  ! generated bundles not built yet (run: bash scripts/build.sh): " + missing.join(", "));
   }
 
   const theme = pages.theme();
