@@ -10,28 +10,35 @@
  *
  * Direction model (see docs/rtl-audit.md for the measurements)
  * -----------------------------------------------------------
- * Every decorated element gets BOTH a `dir` attribute (semantics, form
- * controls, accessibility) and a class that carries the real, `!important`
- * styling:
+ * Every decorated element gets its direction three times over:
  *
- *    .pc-rtl  -> direction: rtl + text-align: right
- *    .pc-ltr  -> direction: ltr + text-align: left
+ *   el.classList.add("pc-rtl")             -> themed styling (font, spacing)
+ *   el.setAttribute("dir", "rtl")          -> semantics, form controls, a11y
+ *   el.style direction/text-align !important -> the value that always wins
  *
- * Nothing relies on `dir="auto"` any more: `auto` is decided by the first
- * strong character only, which turns Persian paragraphs that start with a
- * Latin token ("API ...", "React ...") into left-to-right text and lets the
- * layout flip line by line while an answer streams.
+ * The inline `!important` declaration is the last resort: a site stylesheet
+ * that hard-codes `direction: ltr !important` on a higher-specificity selector
+ * (chat UIs do this on message bodies) still loses against an inline
+ * `!important` declaration. The previous version relied on the class alone,
+ * which is why some sites kept their own direction no matter what.
  *
- * English-only blocks inside a block we flipped RTL are pinned back to LTR
- * (`pc-ltr` without `pc-block`), so containers such as DeepSeek's
- * `.ds-markdown` can be right-aligned without dragging English paragraphs
- * with them.
+ * Nothing relies on `dir="auto"`: `auto` is decided by the first strong
+ * character only, which turns Persian paragraphs that start with a Latin token
+ * ("API ...", "React ...") into left-to-right text and lets the layout flip
+ * line by line while an answer streams.
+ *
+ * English-only blocks inside a block we flipped RTL are pinned back to LTR,
+ * so containers such as DeepSeek's `.ds-markdown` can be right-aligned without
+ * dragging English paragraphs with them.
  */
 (function () {
   "use strict";
 
   if (window.__parsiChinBooted) return;
   window.__parsiChinBooted = true;
+
+  const VERSION = (chrome.runtime && chrome.runtime.getManifest)
+    ? chrome.runtime.getManifest().version : "unknown";
 
   const bidi = () => window.ParsiChin.bidi;
   const rules = () => window.ParsiChin.rules;
@@ -40,13 +47,13 @@
   const decorated = new Set();
 
   /**
-   * Original `dir` state of every element we touched. We MUST remember it:
-   * the page itself may already have dir="rtl"/"ltr"/"auto" (native RTL
-   * sites!). On cleanup we restore the exact original state instead of
-   * blindly removing the attribute — otherwise toggling the extension off
-   * breaks the site's own layout.
+   * Original state of every element we touched: the `dir` attribute AND the
+   * inline direction/text-align values. We MUST remember both — the page may
+   * already set them (native RTL sites, sites that style messages inline). On
+   * cleanup we restore the exact original state instead of blindly removing
+   * things, otherwise toggling the extension off breaks the site's layout.
    */
-  const originalDir = new WeakMap();
+  const originalState = new WeakMap();
 
   let currentSettings = null;
   let rootEl = null;
@@ -56,6 +63,12 @@
 
   const DIR_CLASSES = ["pc-rtl", "pc-ltr"];
   const KIND_CLASSES = ["pc-persian", "pc-mixed"];
+  const STYLE_PROPS = ["direction", "text-align"];
+
+  /** Elements that may never be decorated (they are scan roots, not text). */
+  function isRootLike(el) {
+    return el === document.body || el === document.documentElement;
+  }
 
   function isProtected(el) {
     return el.matches(rules().SKIP_SELECTOR) ||
@@ -92,23 +105,45 @@
     });
   }
 
-  /* ---------------- dir state preservation ---------------- */
+  /* ---------------- state preservation ---------------- */
 
-  function recordDir(el) {
-    if (!originalDir.has(el)) {
-      originalDir.set(el, {
-        existed: el.hasAttribute("dir"),
-        value: el.getAttribute("dir")
-      });
-    }
+  function recordState(el) {
+    if (originalState.has(el)) return;
+    const snapshot = {
+      existed: el.hasAttribute("dir"),
+      value: el.getAttribute("dir")
+    };
+    STYLE_PROPS.forEach(function (prop) {
+      snapshot[prop] = {
+        value: el.style.getPropertyValue(prop) || null,
+        priority: el.style.getPropertyPriority(prop) || null
+      };
+    });
+    originalState.set(el, snapshot);
   }
 
-  function restoreDir(el) {
-    const orig = originalDir.get(el);
+  function restoreState(el) {
+    const orig = originalState.get(el);
     if (!orig) return;
     if (orig.existed) el.setAttribute("dir", orig.value);
     else el.removeAttribute("dir");
-    originalDir.delete(el);
+    STYLE_PROPS.forEach(function (prop) {
+      const saved = orig[prop];
+      if (!saved || saved.value === null) el.style.removeProperty(prop);
+      else el.style.setProperty(prop, saved.value, saved.priority || "");
+    });
+    originalState.delete(el);
+  }
+
+  /**
+   * Force one direction on one element, three times over (class, attribute,
+   * inline `!important`). This is the only place that writes direction.
+   */
+  function forceDirection(el, dir) {
+    recordState(el);
+    el.setAttribute("dir", dir);
+    el.style.setProperty("direction", dir, "important");
+    el.style.setProperty("text-align", dir === "rtl" ? "right" : "left", "important");
   }
 
   /* ---------------- base CSS variables ---------------- */
@@ -176,8 +211,7 @@
    */
   function pinLtr(el) {
     if (el.matches(rules().SKIP_SELECTOR) || el.hasAttribute("data-pc-pinned")) return;
-    recordDir(el);
-    el.setAttribute("dir", "ltr");
+    forceDirection(el, "ltr");
     el.setAttribute("data-pc-pinned", "1");
     el.classList.add("pc-ltr");
     decorated.add(el);
@@ -192,7 +226,8 @@
    * @returns {boolean} true when this element is now RTL
    */
   function applyDecoration(el, settings, insideRtl) {
-    if (!(el instanceof Element) || isProtected(el)) return false;
+    if (!(el instanceof Element) || isRootLike(el)) return false;
+    if (isProtected(el)) return false;
     if (!isBlockCandidate(el)) return false;
 
     const text = el.textContent || "";
@@ -209,8 +244,7 @@
         if (insideRtl) pinLtr(el);
         return false;
       }
-      recordDir(el);
-      el.setAttribute("dir", "ltr");
+      forceDirection(el, "ltr");
       el.classList.add("pc-block", "pc-ltr");
       el.classList.remove("pc-rtl", "pc-persian", "pc-mixed");
       decorated.add(el);
@@ -218,8 +252,7 @@
     }
 
     const dir = info.direction; // "rtl" | "ltr" (never "auto")
-    recordDir(el);
-    el.setAttribute("dir", dir);
+    forceDirection(el, dir);
     el.classList.add("pc-block");
     el.classList.remove(dir === "rtl" ? "pc-ltr" : "pc-rtl");
     el.classList.toggle("pc-rtl", dir === "rtl");
@@ -228,10 +261,7 @@
     el.classList.toggle("pc-mixed", info.kind === "mixed");
     if (el.tagName === "UL" || el.tagName === "OL") el.classList.add("pc-list");
     // Re-evaluated after streaming: drop a stale pin from an earlier pass.
-    if (el.hasAttribute("data-pc-pinned")) {
-      el.removeAttribute("data-pc-pinned");
-      el.classList.remove("pc-ltr");
-    }
+    if (el.hasAttribute("data-pc-pinned")) el.removeAttribute("data-pc-pinned");
     decorated.add(el);
 
     // EXPERIMENTAL: only runs when the user opted in.
@@ -247,8 +277,8 @@
   }
 
   /**
-   * Re-classify a block after streaming added new text, and — unlike before —
-   * also correct a block whose direction changed (mixed -> persian etc.).
+   * Re-classify a block after streaming added new text, and also correct a
+   * block whose direction changed (mixed -> persian etc.).
    */
   function refresh(el, settings, insideRtl) {
     if (!(el instanceof Element)) return;
@@ -286,37 +316,57 @@
     return !hostBlocked(settings);
   }
 
-  /** Find the best scan root for the current page. */
+  /**
+   * Find the best scan root for the current page.
+   *
+   * Order of preference:
+   *   1. the per-site rule's candidates, preferring the NARROWEST one that
+   *      really contains content (a rule may list "main, .ds-chat, #app");
+   *   2. a generic content container (main / article / [role=main] / #app /
+   *      #root);
+   *   3. <body> as the last resort.
+   *
+   * Step 3 matters: chat SPAs rename their containers regularly (DeepSeek's
+   * current build has neither <main> nor #app). Without a fallback the root
+   * stayed null, nothing was ever scanned, and the page only showed the base
+   * font change — "the font changes but the direction never does".
+   */
   function resolveRoot(settings) {
     const rule = rules().ruleForHost(location.hostname);
     if (rule && hostBlocked(settings)) return null;
 
-    let root = null;
-    if (rule) {
-      // "main, .a, .b" -> prefer the NARROWEST candidate that really contains
-      // content; fall back to the largest one (e.g. #app) only when nothing
-      // else matched. Scanning #app as the root is fine, decorating it is not.
-      const candidates = rule.root.split(",").map(function (s) { return s.trim(); });
+    const pickNarrowest = function (selector) {
       let narrow = null;
       let narrowLen = Infinity;
       let largest = null;
-      for (const sel of candidates) {
-        const el = document.querySelector(sel);
-        if (!el) continue;
+      document.querySelectorAll(selector).forEach(function (el) {
         const len = el.textContent.length;
         if (!largest || len > largest.textContent.length) largest = el;
         if (len >= 200 && len <= 120000 && len < narrowLen) {
           narrow = el;
           narrowLen = len;
         }
-      }
-      root = narrow || largest;
-    }
+      });
+      return narrow || largest;
+    };
+
+    let root = null;
+    if (rule) root = pickNarrowest(rule.root);
     if (!root && settings.allSites) {
       root = document.querySelector("main, article, [role='main']");
       if (root && root.textContent.length > 30000) root = null; // too big → skip heuristics
     }
-    return root;
+    if (root) return root;
+
+    // Fallbacks. The rule root may simply not exist on the current build of a
+    // site, or the user enabled the extension for a page we do not know.
+    const known = rules().ruleForHost(location.hostname);
+    if (!known && !settings.allSites) return null;
+
+    root = pickNarrowest("main, [role='main'], article, #root, #app, .app, .chat, .conversation");
+    if (root) return root;
+
+    return document.body; // last resort: the walk skips <body> itself
   }
 
   /* ---------------- apply / cleanup ---------------- */
@@ -336,19 +386,125 @@
     scheduleRefresh();
   }
 
-  function logStats() {
+  /** Names of the classes of an element, for the diagnostic log/report. */
+  function describe(el) {
+    if (!el) return "none";
+    const cls = String(el.className || "").trim().split(/\s+/).filter(Boolean).slice(0, 4);
+    return el.tagName.toLowerCase() + (el.id ? "#" + el.id : "") +
+      (cls.length ? "." + cls.join(".") : "");
+  }
+
+  /** CSS-path-ish description of an element (for the report). */
+  function pathOf(el) {
+    const parts = [];
+    let node = el;
+    let depth = 0;
+    while (node && node.nodeType === Node.ELEMENT_NODE && depth < 6) {
+      parts.unshift(describe(node));
+      node = node.parentElement;
+      depth++;
+    }
+    return parts.join(" > ");
+  }
+
+  function collectStats() {
     let persian = 0;
     let mixed = 0;
+    let pinned = 0;
     decorated.forEach(function (el) {
-      if (el.classList.contains("pc-persian")) persian++;
-      else mixed++;
+      if (el.hasAttribute("data-pc-pinned")) pinned++;
+      else if (el.classList.contains("pc-persian")) persian++;
+      else if (el.classList.contains("pc-mixed")) mixed++;
     });
+    return {
+      blocks: decorated.size,
+      persian: persian,
+      mixed: mixed,
+      pinnedLtr: pinned,
+      root: describe(rootEl)
+    };
+  }
+
+  function logStats() {
+    const s = collectStats();
     console.debug(
-      "[ParsiChin] active · root=" +
-      (rootEl ? rootEl.tagName.toLowerCase() + "." + String(rootEl.className).split(" ").join(".") : "none") +
-      " · blocks=" + decorated.size +
-      " (persian=" + persian + ", mixed=" + mixed + ")"
+      "[ParsiChin] active · root=" + s.root +
+      " · blocks=" + s.blocks +
+      " (persian=" + s.persian + ", mixed=" + s.mixed + ", pinnedLtr=" + s.pinnedLtr + ")"
     );
+  }
+
+  /**
+   * Diagnostics: why is (or isn't) this page decorated?
+   *
+   *   copy(ParsiChin.reportJson())   // paste the JSON into a bug report
+   *
+   * It lists the settings, the resolved scan root, how many blocks were
+   * decorated, and — most usefully — Persian-looking blocks that were NOT
+   * decorated, with the reason and their DOM path.
+   */
+  function report() {
+    const scope = rootEl || document.body;
+    const suspects = [];
+    const chainOf = function (el) {
+      const chain = [];
+      let node = el;
+      let depth = 0;
+      while (node && node.nodeType === Node.ELEMENT_NODE && depth < 5) {
+        chain.push({
+          tag: node.tagName.toLowerCase(),
+          cls: String(node.className || "").slice(0, 90),
+          dir: node.getAttribute("dir"),
+          inlineDirection: node.style.getPropertyValue("direction") || null,
+          contentEditable: node.getAttribute("contenteditable")
+        });
+        node = node.parentElement;
+        depth++;
+      }
+      return chain;
+    };
+
+    if (scope) {
+      scope.querySelectorAll("p, li, div, span, h1, h2, h3, h4, h5, h6, blockquote, td, th")
+        .forEach(function (el) {
+          if (suspects.length >= 10) return;
+          if (el.closest(".pc-block, .pc-ltr, .pc-rtl")) return;
+          const text = (el.textContent || "").trim();
+          if (text.length < 8 || text.length > 20000) return;
+          if (!bidi().hasPersian(text)) return;
+          if (isRootLike(el)) return;
+
+          let reason = "not a text block (no direct text / skipped tag)";
+          if (isProtected(el)) reason = "protected (form, code or contenteditable)";
+          else if (el.textContent.length > 20000 && !isTextishTag(el)) reason = "text too long for a block";
+          else if (isBlockCandidate(el)) reason = "candidate that was not reached by the scan";
+
+          suspects.push({
+            tag: el.tagName.toLowerCase(),
+            cls: String(el.className || "").slice(0, 90),
+            dirAttr: el.getAttribute("dir"),
+            reason: reason,
+            sample: text.slice(0, 60),
+            path: pathOf(el),
+            chain: chainOf(el)
+          });
+        });
+    }
+
+    return {
+      extension: "ParsiChin",
+      version: VERSION,
+      host: location.hostname,
+      url: location.href.split("?")[0],
+      booted: true,
+      ruleId: (rules().ruleForHost(location.hostname) || {}).id || null,
+      pageInScope: currentSettings ? pageInScope(currentSettings) : null,
+      blockedByOverride: currentSettings ? hostBlocked(currentSettings) : null,
+      settings: currentSettings,
+      stats: collectStats(),
+      observer: observer ? describe(observerTarget) : null,
+      suspects: suspects
+    };
   }
 
   /** Undo everything we added (used when the user disables the extension). */
@@ -362,7 +518,7 @@
       el.classList.remove("pc-block", "pc-persian", "pc-mixed", "pc-list");
       el.classList.remove.apply(el.classList, DIR_CLASSES);
       el.removeAttribute("data-pc-pinned");
-      restoreDir(el); // restore the site's own dir, never strip it
+      restoreState(el); // restore the site's own dir + inline styles
     });
     decorated.clear();
     removeBaseVariables();
@@ -402,10 +558,7 @@
   function onMutations(mutations) {
     if (!currentSettings || !currentSettings.enabled) return;
     if (!rootEl) resolveRootLater();
-    if (!rootEl && !currentSettings.allSites) {
-      // Still nothing to scan: keep watching, but stop wasting work.
-      return;
-    }
+    if (!rootEl) return; // nothing to scan yet; the observer stays armed
 
     const pendingText = [];
     for (const mutation of mutations) {
@@ -415,13 +568,9 @@
       }
       for (const node of mutation.addedNodes) {
         if (node.nodeType !== Node.ELEMENT_NODE) continue;
-        if (rootEl) {
-          if (rootEl.contains(node)) {
-            const parentRtl = node.parentElement && node.parentElement.closest(".pc-rtl");
-            walk(node, currentSettings, !!parentRtl);
-          }
-        } else if (currentSettings.allSites) {
-          walk(node, currentSettings, false);
+        if (rootEl.contains(node)) {
+          const parentRtl = node.parentElement && node.parentElement.closest(".pc-rtl");
+          walk(node, currentSettings, !!parentRtl);
         }
       }
     }
@@ -429,9 +578,8 @@
     pendingText.forEach(function (textNode) {
       const parent = textNode.parentElement;
       if (!parent) return;
-      // Only refresh inside the scan root (or everywhere in allSites mode).
-      if (rootEl && !rootEl.contains(parent) && !currentSettings.allSites) return;
-      if (!rootEl && !currentSettings.allSites) return;
+      // Only refresh inside the scan root.
+      if (rootEl && !rootEl.contains(parent)) return;
       let depth = 0;
       let el = parent;
       while (el && depth < 4) {
@@ -444,6 +592,13 @@
 
   /* ---------------- boot ---------------- */
 
+  // Expose the diagnostics on the extension's namespace (harmless on the page,
+  // and the fastest way to answer "why is my page not decorated?").
+  window.ParsiChin = window.ParsiChin || {};
+  window.ParsiChin.report = report;
+  window.ParsiChin.reportJson = function () { return JSON.stringify(report(), null, 2); };
+  window.ParsiChin.rescan = function () { walk(rootEl || document.body, currentSettings, false); };
+
   async function boot() {
     const settings = await window.ParsiChinSettings.get();
     applyAll(settings);
@@ -452,9 +607,15 @@
       applyAll(next);
     });
 
-    chrome.runtime.onMessage.addListener(function (message) {
-      if (message && message.type === "parsi-chin:apply") {
+    chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+      if (!message) return;
+      if (message.type === "parsi-chin:apply") {
         window.ParsiChinSettings.get().then(applyAll);
+        return;
+      }
+      if (message.type === "parsi-chin:stats") {
+        sendResponse(collectStats());
+        return true;
       }
     });
   }
