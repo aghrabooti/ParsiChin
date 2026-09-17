@@ -73,7 +73,9 @@ const TEXT_ENGLISH = "The API returns a JSON payload with the model name.";
 /** Latin-heavy line followed by a Persian line inside ONE block. */
 const TEXT_ZIGZAG = TEXT_LATIN_LIST + "<br>" + TEXT_PERSIAN;
 
-function page(siteCss) {
+function page(siteCss, noRoot) {
+  const open = noRoot ? '<div class="chat-shell"><article-shell>' : '<main class="chat"><article>';
+  const close = noRoot ? '</article-shell></div>' : '</article></main>';
   return `<!DOCTYPE html><html lang="en" dir="ltr"><head><meta charset="utf-8"><style>
   * { box-sizing: border-box; }
   body { margin: 0; font: 16px/1.6 "DejaVu Sans", Arial, sans-serif; width: 780px; }
@@ -86,7 +88,7 @@ function page(siteCss) {
   table { border-collapse: collapse; }
   th, td { border: 1px solid #ddd; padding: 4px 8px; }
   ${siteCss || ""}
-  </style></head><body><main class="chat"><article><div class="markdown prose">
+  </style></head><body>${open}<div class="markdown prose">
 
   <p class="probe" id="fa-pure" data-flavor="sen" data-expect="rtl"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>${TEXT_PERSIAN}</p>
 
@@ -128,7 +130,7 @@ function page(siteCss) {
 
   <p class="probe" id="fa-hostile" data-flavor="sen" data-expect="rtl" style="direction:ltr"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>${TEXT_PERSIAN}</p>
 
-  </div></article></main></body></html>`;
+  </div>${close}</body></html>`;
 }
 
 /* ------------------------------------------------------------------ *
@@ -204,6 +206,8 @@ const MEASURE = () => {
       direction: cs.direction,
       textAlign: cs.textAlign,
       unicodeBidi: cs.unicodeBidi,
+      inlineDirection: el.style.getPropertyValue("direction") || "-",
+      inlinePriority: el.style.getPropertyPriority("direction") || "-",
       flipSafety: el.dataset.flipSafety === "1",
       classes: (el.className || "").replace(/\bprobe\b/g, "").trim(),
       base,
@@ -243,6 +247,7 @@ function judge(row, scenario) {
 const SCENARIOS = [
   { id: "plain", host: "chatgpt.com", siteCss: "" },
   { id: "deepseek-container", host: "chat.deepseek.com", siteCss: "" },
+  { id: "missing-root", host: "chat.deepseek.com", noRoot: true },
   { id: "site-css-ltr", host: "chatgpt.com", siteCss: ".markdown, .markdown p, .markdown li, .markdown td, .markdown th, .markdown div { direction: ltr; }" },
   { id: "site-css-ltr-important", host: "chatgpt.com", siteCss: ".markdown p, .markdown li, .markdown td, .markdown th, .markdown div, .markdown code { direction: ltr !important; text-align: left !important; }" },
   { id: "native-rtl-page", host: "chatgpt.com", nativeRtl: true, siteCss: ".markdown { direction: rtl; text-align: right; }" }
@@ -281,7 +286,7 @@ async function run() {
     const errors = [];
     page_.on("pageerror", (e) => errors.push(String(e)));
     await page_.route("https://" + scenario.host + "/**", (route) =>
-      route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: page(scenario.siteCss) }));
+      route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: page(scenario.siteCss, scenario.noRoot) }));
     await page_.goto("https://" + scenario.host + "/c/rtl-audit");
 
     await page_.evaluate(() => {

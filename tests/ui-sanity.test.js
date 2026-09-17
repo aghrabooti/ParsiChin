@@ -35,7 +35,10 @@ function makeChrome() {
         getManifest: () => ({ version: "0.1.0" }),
         openOptionsPage: () => {}
       },
-      tabs: { query: async () => [{ url: "https://chatgpt.com/c/1" }] },
+      tabs: {
+        query: async () => [{ id: 7, url: "https://chatgpt.com/c/1" }],
+        sendMessage: async () => ({ blocks: 12, persian: 9, mixed: 3, pinnedLtr: 1, root: "main.ds-chat" })
+      },
       permissions: { contains: async () => true, request: async () => true },
       i18n: { getMessage: () => "" }
     }
@@ -69,6 +72,23 @@ async function main() {
   assert.strictEqual(popupEl.checked, true, "popup shows enabled state");
   assert.strictEqual(popupChrome.window.document.getElementById("siteName").textContent, "ChatGPT",
     "popup detects ChatGPT tab");
+  assert.match(popupChrome.window.document.getElementById("siteDetail").textContent, /12/,
+    "popup shows how many blocks the content script decorated (live diagnostics)");
+
+  /* a tab without a content script must not break the popup */
+  const noScriptChrome = makeChrome();
+  noScriptChrome.chrome.tabs.sendMessage = async () => { throw new Error("Receiving end does not exist"); };
+  const noScriptWindow = load(
+    read("src/popup/popup.html"),
+    "src/popup/popup.js",
+    ["src/shared/defaults.js", "src/shared/settings.js", "src/content/rules.js", "src/shared/i18n.js"],
+    noScriptChrome
+  );
+  await new Promise((r) => setTimeout(r, 80));
+  assert.strictEqual(noScriptWindow.document.getElementById("enabled").checked, true,
+    "popup still renders when the tab has no content script");
+  assert.ok(!/بلوک/.test(noScriptWindow.document.getElementById("siteDetail").textContent),
+    "no block count is shown when the content script does not answer");
 
   /* ---------- options ---------- */
   const optChrome = makeChrome();
