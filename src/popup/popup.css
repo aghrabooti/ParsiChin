@@ -117,3 +117,24 @@ main { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px
   line-height: 1.7;
 }
 .footer a { color: var(--accent-dark); }
+
+/* ---------- "enable on this site / all sites" box ---------- */
+
+.enable-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(13, 148, 136, .35);
+  border-radius: 12px;
+  background: rgba(13, 148, 136, .06);
+}
+
+.enable-box[hidden] { display: none; }
+
+.enable-box .btn { width: 100%; }
+
+.muted.small { font-size: 11.5px; line-height: 1.5; }
+
+.muted.error { color: #b91c1c; }
