@@ -19,15 +19,15 @@ git config user.name  "Your Name"
 git config user.email "you@example.com"
 
 # --------------------------------------------- 1) optional host permission fix
-git add src/options/options.js src/background/service-worker.js src/shared/defaults.js manifest.json
+git add src/options/options.js src/background/service-worker.js src/shared/defaults.js manifest.json docs/img/downloads.png
 git commit -m "fix: optional host permission"
 
 # --------------------------------------------- 2) direction engine + CSS
-git add src/content/bidi.js src/content/entry.js src/content/rules.js styles/parsi-chin.css
+git add src/content/bidi.js src/content/entry.js src/content/rules.js styles/parsi-chin.css src/popup/popup.js
 git commit -m "fix: rtl per block"
 
 # --------------------------------------------- 3) tests: audit + regressions
-git add tests/smoke.test.js tests/permissions.test.js tools/rtl-audit.js
+git add tests/smoke.test.js tests/ui-sanity.test.js tests/permissions.test.js tools/rtl-audit.js
 git commit -m "test: rtl audit"
 
 # --------------------------------------------- 4) live RTL lab
