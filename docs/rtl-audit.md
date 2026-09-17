@@ -11,6 +11,10 @@ in v0.2.0, and how to verify it yourself in a real browser.
 | --- | --- | --- |
 | v0.1.0 (`HEAD`) | 95 | **22** |
 | v0.2.0 (fixed) | 95 | **0** |
+| after the "font changes but not the direction" report | 114 | **0** |
+
+The `missing-root` scenario added for that report fails **13 of 19 probes** with the code as it
+was before the fix and **0** after it.
 
 Raw reports: [`rtl-audit-before.json`](rtl-audit-before.json),
 [`rtl-audit-after.json`](rtl-audit-after.json).
@@ -33,6 +37,7 @@ scenarios:
 | `deepseek-container` | DeepSeek-style `.ds-markdown` wrapper on `chat.deepseek.com` |
 | `site-css-ltr` | site hard-codes `direction: ltr` on message bodies |
 | `site-css-ltr-important` | site hard-codes `direction: ltr !important` |
+| `missing-root` | the rule's container does not exist (no `<main>`, no `#app`) — the shape of DeepSeek's current build |
 | `native-rtl-page` | a page that is already RTL |
 
 Each probe is measured two ways so the result cannot be argued with:
@@ -185,7 +190,41 @@ npm run build            # dist/parsi-chin-v0.2.0.zip
 
 ---
 
-## 5. Known limitations (unchanged by this fix)
+## 5. Follow-up: "the font changes but the direction never does" (DeepSeek)
+
+Reported from a real browser and reproduced with the `missing-root` scenario. Two causes:
+
+1. **The scan root could be absent.** `resolveRoot()` consulted only the site rule's
+   candidates (`main, .ds-chat, #app` on DeepSeek). If a build has none of them — DeepSeek's
+   current one does not — the root stayed `null`, `onMutations` returned early forever, and the
+   only visible effect of the extension was the base stylesheet (`html.pc-font-vazirmatn body`
+   …), i.e. **the font changed and nothing else**. There is now a fallback chain:
+
+   ```
+   rule candidates ("main, .ds-chat, #app")     -> narrowest with content
+     else generic containers                     -> main, [role=main], article, #root,
+                                                    #app, .app, .chat, .conversation
+     else <body>                                 -> walked, but never decorated itself
+   ```
+
+2. **Direction rode on the class alone.** `.pc-rtl` wins against typical site CSS, but not
+   against a site rule with `!important` *and* higher specificity. Decorated blocks now get
+   `direction`/`text-align` **inline with `!important`**, which no author stylesheet can
+   override, and the original `dir` *and* inline values are snapshotted and restored when the
+   extension is disabled.
+
+Diagnostics shipped with the fix:
+
+```js
+// in the page console
+ParsiChin.reportJson()   // settings, scan root, decorated count, undecorated Persian blocks + why
+```
+
+The popup shows the decorated block count of the active tab for the same reason. The lab has a
+**Container → "redesigned (no `<main>`)"** switch that reproduces the situation: the v0.1.0
+snapshot scores 7/20, the fixed build 20/20 with `root=div.chat-shell.chat`.
+
+## 6. Known limitations (unchanged by this fix)
 
 * **Tables**: cells are flipped individually; the table's column order stays
   LTR — a fully RTL table would require reversing `<col>`/row order, which breaks

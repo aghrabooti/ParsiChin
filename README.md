@@ -37,6 +37,11 @@ The result is the familiar zig-zag, uneven margins and words that appear to be m
 * **Safe by default** — code blocks, forms and chat inputs are never touched; numbers-only and code-only
   blocks are left alone; disabling the extension restores the page exactly (including a `dir` attribute
   the site had set itself).
+* **Keeps working when a site is redesigned** — if the known container is gone, the scan falls
+  back to generic containers and finally to `<body>`, instead of silently doing nothing.
+* **Diagnostics** — `ParsiChin.reportJson()` in the page console explains what happened on the
+  current page (scan root, decorated count, and every Persian block that was *not* decorated
+  with the reason), and the popup shows the live block count of the tab.
 * **Live updates** — a `MutationObserver` decorates answers while they stream in.
 * **Two modes** — `auto` (only blocks that contain Persian) or `always` (every block of the conversation).
 
