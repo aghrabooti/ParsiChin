@@ -364,6 +364,9 @@ function landing(ctx) {
       linkCard("README.md", "Install, options, scripts and how the direction engine works.") +
       linkCard("CHANGELOG.md", "Every fix, including the permission error and the DeepSeek report.") +
       linkCard("demo/legacy/", "The v0.1.0 content script kept around so the lab can prove the old defects.") +
+      linkCard("STORE.md", "Publishing guide: the upload package, listing copy, permission justifications, review notes.") +
+      linkCard("PRIVACY.md", "Privacy policy to link from the store listing — nothing is collected, no network calls.") +
+      linkCard("docs/store/", "Store graphics: three 1280×800 screenshots, 440×280 promo tile, 1400×560 marquee.") +
     "</div></div>\n" +
     "</section>\n";
 
