@@ -7,6 +7,25 @@
  *  3. react to settings changes / popup messages (re-scan or cleanup),
  *  4. never touch forms, code blocks, or English-only content by default,
  *  5. restore the page exactly as it was when disabled (incl. native dir).
+ *
+ * Direction model (see docs/rtl-audit.md for the measurements)
+ * -----------------------------------------------------------
+ * Every decorated element gets BOTH a `dir` attribute (semantics, form
+ * controls, accessibility) and a class that carries the real, `!important`
+ * styling:
+ *
+ *    .pc-rtl  -> direction: rtl + text-align: right
+ *    .pc-ltr  -> direction: ltr + text-align: left
+ *
+ * Nothing relies on `dir="auto"` any more: `auto` is decided by the first
+ * strong character only, which turns Persian paragraphs that start with a
+ * Latin token ("API ...", "React ...") into left-to-right text and lets the
+ * layout flip line by line while an answer streams.
+ *
+ * English-only blocks inside a block we flipped RTL are pinned back to LTR
+ * (`pc-ltr` without `pc-block`), so containers such as DeepSeek's
+ * `.ds-markdown` can be right-aligned without dragging English paragraphs
+ * with them.
  */
 (function () {
   "use strict";
@@ -35,6 +54,9 @@
   let observerTarget = null;
   const requestedFonts = new Set();
 
+  const DIR_CLASSES = ["pc-rtl", "pc-ltr"];
+  const KIND_CLASSES = ["pc-persian", "pc-mixed"];
+
   function isProtected(el) {
     return el.matches(rules().SKIP_SELECTOR) ||
       !!el.closest("input, textarea, select, [contenteditable='true'], [role='textbox']");
@@ -60,6 +82,14 @@
       if (el.matches(extras[i])) return true;
     }
     return false;
+  }
+
+  /** Tags that are legitimately allowed to hold a very long answer. */
+  function isTextishTag(el) {
+    if (rules().TEXT_BLOCK_TAGS.indexOf(el.tagName) !== -1) return true;
+    return markdownSelectors().some(function (sel) {
+      try { return el.matches(sel); } catch (e) { return false; }
+    });
   }
 
   /* ---------------- dir state preservation ---------------- */
@@ -137,31 +167,71 @@
 
   /* ---------------- decoration ---------------- */
 
-  /** Decorate a single text block (idempotent per element). */
-  function decorate(el, settings) {
-    if (!(el instanceof Element) || isProtected(el)) return;
-    if (!isBlockCandidate(el)) return;
+  /**
+   * Pin an element to LTR without restyling it. Used for English-only content
+   * that lives inside a block we flipped to RTL (containers such as
+   * `.ds-markdown` or a Persian <li> holding an English <p>): without this the
+   * English line inherits `direction: rtl` and `text-align: right`, so its
+   * punctuation jumps to the wrong end and the text hugs the wrong edge.
+   */
+  function pinLtr(el) {
+    if (el.matches(rules().SKIP_SELECTOR) || el.hasAttribute("data-pc-pinned")) return;
+    recordDir(el);
+    el.setAttribute("dir", "ltr");
+    el.setAttribute("data-pc-pinned", "1");
+    el.classList.add("pc-ltr");
+    decorated.add(el);
+  }
+
+  /**
+   * Decorate / re-decorate a single block (idempotent per element).
+   *
+   * @param {Element} el
+   * @param {object}  settings
+   * @param {boolean} insideRtl true when an ancestor was flipped to RTL
+   * @returns {boolean} true when this element is now RTL
+   */
+  function applyDecoration(el, settings, insideRtl) {
+    if (!(el instanceof Element) || isProtected(el)) return false;
+    if (!isBlockCandidate(el)) return false;
 
     const text = el.textContent || "";
-    if (text.trim().length < 2) return;
-    // Never flip giant containers (the whole #app / page wrapper): such
-    // elements are scan roots, not text blocks.
-    if (text.length > 30000) return;
+    if (text.trim().length < 2) return false;
+    // Never flip giant *containers* (the page wrapper / #app). Long answers
+    // are fine: a 40k-character paragraph is still a paragraph.
+    if (text.length > 20000 && !isTextishTag(el)) return false;
 
     const info = bidi().classify(text);
-    if (info.kind === "none" && settings.applyMode !== "always") return;
 
-    const dir = settings.applyMode === "always"
-      ? (info.kind === "persian" ? "rtl" : "auto")
-      : bidi().directionFor(info.kind);
-
-    if (dir) {
+    /* English-only block: never restyle it, but stop RTL from leaking in. */
+    if (info.kind === "none") {
+      if (settings.applyMode !== "always") {
+        if (insideRtl) pinLtr(el);
+        return false;
+      }
       recordDir(el);
-      el.setAttribute("dir", dir);
+      el.setAttribute("dir", "ltr");
+      el.classList.add("pc-block", "pc-ltr");
+      el.classList.remove("pc-rtl", "pc-persian", "pc-mixed");
+      decorated.add(el);
+      return false;
     }
+
+    const dir = info.direction; // "rtl" | "ltr" (never "auto")
+    recordDir(el);
+    el.setAttribute("dir", dir);
     el.classList.add("pc-block");
+    el.classList.remove(dir === "rtl" ? "pc-ltr" : "pc-rtl");
+    el.classList.toggle("pc-rtl", dir === "rtl");
+    el.classList.toggle("pc-ltr", dir === "ltr");
     el.classList.toggle("pc-persian", info.kind === "persian");
-    el.classList.toggle("pc-mixed", info.kind !== "persian");
+    el.classList.toggle("pc-mixed", info.kind === "mixed");
+    if (el.tagName === "UL" || el.tagName === "OL") el.classList.add("pc-list");
+    // Re-evaluated after streaming: drop a stale pin from an earlier pass.
+    if (el.hasAttribute("data-pc-pinned")) {
+      el.removeAttribute("data-pc-pinned");
+      el.classList.remove("pc-ltr");
+    }
     decorated.add(el);
 
     // EXPERIMENTAL: only runs when the user opted in.
@@ -172,37 +242,31 @@
         if (fixed !== node.data) node.data = fixed;
       });
     }
+
+    return dir === "rtl";
   }
 
   /**
-   * Re-classify a block after streaming added new text.
-   * Only upgrades: "none" → "mixed" → "persian".
+   * Re-classify a block after streaming added new text, and — unlike before —
+   * also correct a block whose direction changed (mixed -> persian etc.).
    */
-  function refresh(el) {
-    if (!(el instanceof Element) || isProtected(el)) return;
-    if (!isBlockCandidate(el) || !currentSettings) return;
-    const info = bidi().classify(el.textContent || "");
-    if (info.kind === "none") return;
-    if (!el.classList.contains("pc-block")) {
-      el.classList.add("pc-block");
-      decorated.add(el);
+  function refresh(el, settings, insideRtl) {
+    if (!(el instanceof Element)) return;
+    if (insideRtl === undefined) {
+      const rtlAncestor = el.parentElement && el.parentElement.closest(".pc-rtl");
+      insideRtl = !!rtlAncestor;
     }
-    const dir = bidi().directionFor(info.kind);
-    if (dir) {
-      recordDir(el);
-      el.setAttribute("dir", dir);
-    }
-    el.classList.toggle("pc-persian", info.kind === "persian");
-    el.classList.toggle("pc-mixed", info.kind !== "persian");
+    applyDecoration(el, settings || currentSettings, insideRtl);
   }
 
   /** Walk a subtree and decorate every eligible block. */
-  function walk(node, settings) {
+  function walk(node, settings, insideRtl) {
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     if (isProtected(node)) return;
-    decorate(node, settings);
+    const isRtl = applyDecoration(node, settings, insideRtl);
     const children = node.children;
-    for (let i = 0; i < children.length; i++) walk(children[i], settings);
+    const childInsideRtl = insideRtl || isRtl;
+    for (let i = 0; i < children.length; i++) walk(children[i], settings, childInsideRtl);
   }
 
   /* ---------------- scan root ---------------- */
@@ -264,7 +328,7 @@
 
     applyBaseVariables(settings);
     rootEl = resolveRoot(settings);
-    if (rootEl) walk(rootEl, settings);
+    if (rootEl) walk(rootEl, settings, false);
     logStats();
 
     // IMPORTANT: observer must be (re)scheduled on every enable, not only at
@@ -295,7 +359,9 @@
       observerTarget = null;
     }
     decorated.forEach(function (el) {
-      el.classList.remove("pc-block", "pc-persian", "pc-mixed");
+      el.classList.remove("pc-block", "pc-persian", "pc-mixed", "pc-list");
+      el.classList.remove.apply(el.classList, DIR_CLASSES);
+      el.removeAttribute("data-pc-pinned");
       restoreDir(el); // restore the site's own dir, never strip it
     });
     decorated.clear();
@@ -328,7 +394,7 @@
     const found = resolveRoot(currentSettings);
     if (found) {
       rootEl = found;
-      walk(found, currentSettings);
+      walk(found, currentSettings, false);
       scheduleRefresh(); // re-target the observer to the real root
     }
   }
@@ -336,6 +402,10 @@
   function onMutations(mutations) {
     if (!currentSettings || !currentSettings.enabled) return;
     if (!rootEl) resolveRootLater();
+    if (!rootEl && !currentSettings.allSites) {
+      // Still nothing to scan: keep watching, but stop wasting work.
+      return;
+    }
 
     const pendingText = [];
     for (const mutation of mutations) {
@@ -346,9 +416,12 @@
       for (const node of mutation.addedNodes) {
         if (node.nodeType !== Node.ELEMENT_NODE) continue;
         if (rootEl) {
-          if (rootEl.contains(node)) walk(node, currentSettings);
+          if (rootEl.contains(node)) {
+            const parentRtl = node.parentElement && node.parentElement.closest(".pc-rtl");
+            walk(node, currentSettings, !!parentRtl);
+          }
         } else if (currentSettings.allSites) {
-          walk(node, currentSettings);
+          walk(node, currentSettings, false);
         }
       }
     }
@@ -362,7 +435,7 @@
       let depth = 0;
       let el = parent;
       while (el && depth < 4) {
-        refresh(el);
+        refresh(el, currentSettings);
         el = el.parentElement;
         depth++;
       }
