@@ -1,199 +1,162 @@
 ParsiChin v0.2.0 — commit log
-=============================
+==========================
 
-This release contains five commits, one per concern. Each block below lists the
-files it touches and the individual changes it contains, so the history can be
-reviewed (or replayed) commit by commit.
+Base commit : 9f5fa71  test(smoke): enhance smoke tests for DeepSeek layout and Persian text handling
+Head        : 06b362a
+Commits     : 22
+Files       : 43 changed
 
-Applied commits on branch arena/01a0b0f4-parsichin
+Everything is pushed to the branch arena/01a0b0f4-parsichin (PR #1) and is also
+available as a patch that replays the whole change set onto main:
+
+  ParsiChin-v0.2.0.patch     git format-patch --binary --output ... 9f5fa71..HEAD
+      git clone https://github.com/aghrabooti/ParsiChin.git && cd ParsiChin
+      git checkout main && git checkout -b rtl-fix
+      git -c user.name=me -c user.email=me@example.com am --3way ../ParsiChin-v0.2.0.patch
+
+Or group the changes into seven short commits under your own name:
+
+  bash commit-all.sh     # then: git push -u origin HEAD
+
 --------------------------------------------------------------------------
-ebe6ac0  fix(rtl): decide one direction per block from content, not dir=auto
-0d58b86  test(rtl): add a headless-browser audit and regression tests
-821fa7a  feat(demo): add the live RTL lab
-9923457  docs(rtl): root-cause audit, screenshots and English docs
-99d59f2  chore(release): v0.2.0
-(base: 9f5fa71 "test(smoke): enhance smoke tests for DeepSeek layout and Persian text handling")
-plus one follow-up housekeeping commit that records these hashes and adds
-ParsiChin-*.zip / ParsiChin-*.patch to .gitignore.
+Applied commits (newest first)
+--------------------------------------------------------------------------
+  06b362a  2026-09-17 21:06  fix: optional host permission
+  5fe4783  2026-09-17 20:59  chore: commit script keeps your identity
+  efe2617  2026-09-17 20:53  docs: list commit script
+  9d7d6f6  2026-09-17 20:53  chore: short commit messages
+  e5550ae  2026-09-17 20:44  feat(server): offer commit-all.sh for download
+  abd379a  2026-09-17 20:44  chore(release): v0.2.0
+  e7ceee3  2026-09-17 20:40  docs: make the git am step work on a fresh machine
+  6d90f2f  2026-09-17 20:39  feat(server): offer the copy-paste command file for download
+  238bd36  2026-09-17 20:39  docs: add a single copy-paste command block
+  718b17c  2026-09-17 20:33  docs(img): lab screenshot with the download panel
+  d1fc2dd  2026-09-17 20:32  chore: remove stray duplicate files accidentally added at the repo root
+  c7bdb60  2026-09-17 20:32  feat(server): serve the download bundles from the live lab
+  fcb1f68  2026-09-17 20:30  docs(img): refresh the lab screenshot with the download links
+  e031901  2026-09-17 20:30  docs(demo): avoid a stale commit count in the download label
+  a728a30  2026-09-17 20:30  feat(demo): link the download bundles from the lab page
+  540df1c  2026-09-17 20:29  docs: note the housekeeping commit in the commit log
+  80ddecf  2026-09-17 20:29  chore: record applied commit hashes and ignore local download bundles
+  99d59f2  2026-09-17 20:14  chore(release): v0.2.0
+  9923457  2026-09-17 20:14  docs(rtl): root-cause audit, screenshots and English docs
+  821fa7a  2026-09-17 20:14  feat(demo): add the live RTL lab
+  0d58b86  2026-09-17 20:14  test(rtl): add a headless-browser audit and regression tests
+  ebe6ac0  2026-09-17 20:14  fix(rtl): decide one direction per block from content, not dir=auto
 
-The same five commits are available as a reviewable patch file:
-  ParsiChin-v0.2.0.patch   (git format-patch --binary 9f5fa71..HEAD)
+  (the newest commit only refreshes this file, so it may list itself as missing)
 
+--------------------------------------------------------------------------
+The same change set, grouped the way commit-all.sh commits it
+--------------------------------------------------------------------------
 
-Every commit leaves the tree green: `npm test`, `npm run check` and
-`npm run audit:rtl` pass at the end of each one.
-
-==========================================================================
-COMMIT 1/5 — fix(rtl): decide one direction per block from content, not dir=auto
-==========================================================================
-Files: src/content/bidi.js, src/content/rules.js, src/content/entry.js,
-       styles/parsi-chin.css
+COMMIT 1/7 — fix: optional host permission
+Files:
+  src/options/options.js
+  src/background/service-worker.js
+  src/shared/defaults.js
+  manifest.json
 Command:
-  git add src/content/bidi.js src/content/rules.js src/content/entry.js \
-          styles/parsi-chin.css
-  git commit -m "fix(rtl): decide one direction per block from content, not dir=auto"
+  git add src/options/options.js src/background/service-worker.js src/shared/defaults.js manifest.json
+  git commit -m "fix: optional host permission"
+Changes:
+  The options page requested the literal <all_urls> pattern while manifest.json declares the
+  wildcard host pattern, so Chrome answered "Only permissions specified in the manifest may be
+  requested" (an unhandled promise rejection) and the permission never became granted.
+  The service worker checked the same wrong pattern, so "all sites" and custom-site injection
+  silently did nothing.
+    * one pattern constant per context (ALL_ORIGINS = ["*://*/*"]) used for request(),
+      contains() and registerContentScripts();
+    * permissions.request() is now the first awaited call in the gesture handler (awaiting
+      anything else makes Chrome drop the user gesture);
+    * rejections are caught and the warning under the switch reflects the real state;
+    * the service worker re-registers dynamic scripts on chrome.permissions.onAdded.
 
-Changes
--------
-src/content/bidi.js
-  * LETTER_RANGES replaces the "everything in the Arabic block counts as a
-    letter" ranges: digits, ZWNJ/ZWJ, LRM/RLM and Arabic punctuation no longer
-    count. Fixes numbers-only blocks being classified as Persian (ratio 1.00).
-  * persianWordCount(): counts runs of >= 2 Persian letters, so the conjunction
-    "و" inside a Latin list is not mistaken for Persian prose.
-  * classify() returns { kind, ratio, persianWords, direction }; a block is
-    Persian-dominant when ratio >= 0.5, or ratio >= 0.25 with a real Persian
-    word (Latin-heavy Persian prose such as "با React و ... می‌توان").
-  * directionFor("mixed") is now a stable "ltr" instead of "auto".
-  * isPersianLetter / isLatinLetter / isBidiControl helpers exported.
-
-src/content/rules.js
-  * UL/OL added to TEXT_BLOCK_TAGS so list containers are flipped with items.
-  * isCodeOnly(): wrappers whose every text node lives in pre/code/kbd/samp are
-    no longer text blocks (e.g. <p><code>"سلام" = 1;</code></p>).
-  * CODE_TAGS and isCodeOnly exported for the content script and tests.
-
-src/content/entry.js
-  * One direction per block, applied twice: a `dir` attribute and the
-    .pc-rtl / .pc-ltr class that the stylesheet keys on. dir="auto" is gone.
-  * pinLtr(): English-only content inside a block flipped to RTL is pinned back
-    to LTR without being restyled (containment, e.g. DeepSeek .ds-markdown).
-  * walk() tracks whether an ancestor was flipped and passes it down.
-  * The 30 000-character guard now only skips giant containers, not long
-    paragraphs (isTextishTag decides).
-  * refresh() can correct a direction that changed while an answer streamed,
-    instead of only upgrading "none -> mixed -> persian".
-  * cleanup() also removes pc-list/pc-ltr/pc-rtl and the pin marker.
-
-styles/parsi-chin.css
-  * .pc-rtl / .pc-ltr are the single source of truth with !important rules and
-    higher specificity, so a site's `direction: ltr !important` cannot win.
-  * unicode-bidi: plaintext removed — it re-resolved the base direction for
-    every line (Latin line left, Persian line right) and made the layout flip
-    while text streamed in.
-  * List rules flip the container and move the marker indent to the inline
-    start edge, so bullets sit next to a right-aligned item.
-  * [dir="rtl"|"ltr"] fallbacks kept for engines that read the attribute.
-  * Code block font stack gained the bundled Persian font as a last-resort
-    fallback (systems whose monospace font has no Arabic glyphs).
-
-==========================================================================
-COMMIT 2/5 — test(rtl): add a headless-browser audit and regression tests
-==========================================================================
-Files: tools/rtl-audit.js, tests/smoke.test.js
+COMMIT 2/7 — fix: rtl per block
+Files:
+  src/content/bidi.js
+  src/content/entry.js
+  src/content/rules.js
+  styles/parsi-chin.css
 Command:
-  git add tools/rtl-audit.js tests/smoke.test.js
-  git commit -m "test(rtl): add a headless-browser audit and regression tests"
+  git add src/content/bidi.js src/content/entry.js src/content/rules.js styles/parsi-chin.css
+  git commit -m "fix: rtl per block"
+Changes:
+  Direction is decided once per block from content statistics instead of dir="auto" (which
+  resolves from the first strong character only) and unicode-bidi: plaintext (which resolved
+  per line). Persian-dominant = ratio >= 0.5, or >= 0.25 with a real Persian word.
+  Digits/ZWNJ/ZWJ/LRM/RLM no longer count as letters; list containers are flipped with their
+  items; English content inside an RTL block is pinned back to LTR; .pc-rtl/.pc-ltr carry the
+  !important rules so a site's own direction CSS cannot win; long paragraphs are processed.
 
-Changes
--------
-tools/rtl-audit.js (new)
-  * Loads the real content scripts and the real stylesheet into a mock chat
-    page inside headless Chromium and measures five scenarios: plain UI,
-    DeepSeek-style .ds-markdown container, site CSS with `direction: ltr`,
-    the same with `!important`, and a natively RTL page.
-  * Measures base direction and alignment with Persian/Latin <bdi> sentinels
-    (bidi-isolated, ignored by the extension), list-marker side per list, and a
-    per-line flip-flop probe; judges each probe against the expected direction.
-  * `--json` for machine-readable reports, `--strict` to exit 1 on failures;
-    degrades to a friendly skip message when no browser is available.
-  * Result on the same fixture: 22 failing probes before the fix, 0 after.
-
-tests/smoke.test.js
-  * Regression assertions, one per defect fixed in commit 1/5:
-      - numbers-only block stays untouched (digits are not Persian letters);
-      - code-only paragraph is never flipped;
-      - a Latin list joined by "و" stays LTR;
-      - Latin-heavy Persian prose is RTL, not the first-strong-character LTR;
-      - the list container (pc-list + pc-rtl) is flipped with its items;
-      - an English paragraph inside an RTL container is pinned to LTR and is
-        not restyled;
-      - a ~62 000-character paragraph is still decorated;
-      - classify()/persianWordCount()/directionFor() unit expectations.
-
-==========================================================================
-COMMIT 3/5 — feat(demo): add the live RTL lab
-==========================================================================
-Files: demo/index.html, demo/demo-lab.css, demo/demo-lab.js, demo/chat.html,
-       demo/demo-chat.css, demo/chat-boot.js, demo/legacy/*, tools/serve.js
+COMMIT 3/7 — test: rtl audit
+Files:
+  tests/smoke.test.js
+  tests/permissions.test.js
+  tools/rtl-audit.js
 Command:
-  git add demo tools/serve.js
-  git commit -m "feat(demo): add the live RTL lab"
+  git add tests/smoke.test.js tests/permissions.test.js tools/rtl-audit.js
+  git commit -m "test: rtl audit"
+Changes:
+  One regression assertion per defect. tests/permissions.test.js reproduces the manifest/
+  permission mismatch with a Chrome stub that rejects undeclared origins exactly like Chrome.
+  tools/rtl-audit.js loads the real sources into headless Chromium and measures 95 probes
+  across five scenarios (plain, DeepSeek container, site LTR CSS, site LTR !important,
+  native RTL): 22 failing before the RTL fix, 0 after.
 
-Changes
--------
-  * demo/index.html + demo-lab.*: an English lab page that embeds the mock chat
-    and renders the same PASS/FAIL table as tools/rtl-audit.js from the
-    measurements taken in the visitor's own browser.
-  * demo/chat.html + demo-chat.css: the mock AI answer with one probe per
-    defect (Persian prose, Latin-heavy Persian prose, Latin list, English
-    paragraph, code-only and digits-only blocks, zig-zag block, Persian list,
-    inline code, table cells, DeepSeek container, per-element hostile style).
-  * demo/chat-boot.js: stubs chrome.*, loads either the current sources or the
-    v0.1.0 snapshot, maps localhost to the selected host rule, measures and
-    reports to the parent frame.
-  * demo/legacy/: the v0.1.0 content scripts and stylesheet, exported from git
-    history, so the lab can show the defect and the fix side by side.
-  * The hostile-stylesheet switch uses media="not all" because the `disabled`
-    attribute on <style> is not honoured reliably.
-  * tools/serve.js: dependency-free static server (0.0.0.0, PORT env var) that
-    serves the repository root so /demo, /src, /styles and the fonts resolve.
-
-==========================================================================
-COMMIT 4/5 — docs(rtl): root-cause audit, screenshots and English docs
-==========================================================================
-Files: docs/rtl-audit.md, docs/rtl-audit-before.json, docs/rtl-audit-after.json,
-       docs/img/*.png, README.md, CONTRIBUTING.md, ROADMAP.md, CHANGELOG.md
+COMMIT 4/7 — feat: rtl lab
+Files:
+  demo/*
+  tools/serve.js
 Command:
-  git add docs README.md CONTRIBUTING.md ROADMAP.md CHANGELOG.md
-  git commit -m "docs(rtl): root-cause audit, screenshots and English docs"
+  git add demo/* tools/serve.js
+  git commit -m "feat: rtl lab"
+Changes:
+  Live lab (npm run demo): the real content script and stylesheet run inside a mock chat page
+  and every probe is measured in the visitor's browser, with switches for the current build vs
+  the v0.1.0 snapshot (demo/legacy/), a hostile direction: ltr !important stylesheet, the
+  DeepSeek container rule, apply mode and font. tools/serve.js serves the repo root and offers
+  the download bundles at /download/.
 
-Changes
--------
-  * docs/rtl-audit.md: how the audit runs, the six root causes with measurements
-    (dir="auto" first-strong-character resolution, unicode-bidi: plaintext
-    line-by-line resolution, digits/ZWNJ counted as letters, list containers
-    left unflipped, RTL inheritance leaking into English content, the 30 000
-    character guard, and the dir attribute being only a presentational hint),
-    what v0.2.0 changes per file, how to reproduce, and known limitations.
-  * docs/rtl-audit-before.json / -after.json: the raw 95-probe reports
-    (22 failing before, 0 after) used as evidence.
-  * docs/img/before-v0.1.0.png, after-v0.2.0.png, lab.png: rendered proof
-    (right-aligned Persian list with bullets next to the text, code and digits
-    left alone, English paragraph inside a Persian container keeping its
-    punctuation, no per-line flip-flop).
-  * README.md: English rewrite, problem/solution, install, live lab, project
-    layout, supported sites, settings, development commands, limitations.
-  * CONTRIBUTING.md: English rewrite with the direction model as ground rules
-    (never dir="auto", one direction per block, classes carry the styling),
-    testing checklist and the site-adding procedure.
-  * ROADMAP.md: phases restated as shipped / next, with the shadow DOM, frames
-    and UI-localisation work moved into phase 2 and 4.
-  * CHANGELOG.md: new file, 0.2.0 entry listing every fix, addition and change.
-
-==========================================================================
-COMMIT 5/5 — chore(release): v0.2.0
-==========================================================================
-Files: manifest.json, package.json, scripts/ci-check.sh, COMMITS.txt
+COMMIT 5/7 — docs: rtl report
+Files:
+  CHANGELOG.md
+  COMMANDS.md
+  COMMITS.txt
+  CONTRIBUTING.md
+  README.md
+  ROADMAP.md
+  commit-all.sh
+  docs/*
 Command:
-  git add manifest.json package.json scripts/ci-check.sh COMMITS.txt
-  git commit -m "chore(release): v0.2.0"
+  git add CHANGELOG.md COMMANDS.md COMMITS.txt CONTRIBUTING.md README.md ROADMAP.md commit-all.sh docs/*
+  git commit -m "docs: rtl report"
+Changes:
+  docs/rtl-audit.md: the root-cause audit with measurements, before/after screenshots and the
+  raw reports (docs/rtl-audit-*.json). README/CONTRIBUTING/ROADMAP rewritten in English;
+  CHANGELOG lists every fix; COMMANDS.md is the copy-paste guide; commit-all.sh commits the
+  whole change set in the seven groups described here.
 
-Changes
--------
-  * manifest.json, package.json: version 0.1.0 -> 0.2.0 so the build script
-    produces dist/parsi-chin-v0.2.0.zip.
-  * package.json scripts: `demo` (RTL lab) and `audit:rtl` (browser audit).
-  * scripts/ci-check.sh: one command that runs the static checks, the jsdom
-    tests, the release build and (when a browser is present) the RTL audit.
-  * COMMITS.txt (this file).
+COMMIT 6/7 — chore: v0.2.0
+Files:
+  .gitignore
+  package.json
+  package-lock.json
+  scripts/*
+Command:
+  git add .gitignore package.json package-lock.json scripts/*
+  git commit -m "chore: v0.2.0"
+Changes:
+  Version 0.2.0 in manifest.json and package.json, npm scripts (demo, audit:rtl), a strict
+  test script that includes the permission test, executable helper scripts, and a .gitignore
+  for local download bundles and dist/.
 
-==========================================================================
+--------------------------------------------------------------------------
 Verification
-==========================================================================
-  npm test              -> smoke + UI tests pass, including one regression
-                           assertion per defect
-  npm run check         -> JSON, JS syntax and required files
-  npm run build         -> dist/parsi-chin-v0.2.0.zip
-  npm run audit:rtl     -> 95 probes, 0 failing (was 22 failing on v0.1.0)
-  npm run demo          -> http://localhost:8080/ (live lab)
+--------------------------------------------------------------------------
+  npm test            smoke + UI tests + one regression per fixed defect
+  npm run check       JSON, JS syntax and required files
+  npm run build       dist/parsi-chin-v0.2.0.zip
+  npm run demo        live RTL lab at http://localhost:8080/
+  npm run audit:rtl   headless-Chromium audit: 95 probes, 0 failing
+
