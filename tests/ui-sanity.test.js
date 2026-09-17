@@ -117,6 +117,46 @@ async function main() {
     "settings persisted after change");
 
   console.log("✔ ui sanity test passed — popup & options initialize correctly");
+  await testServerPages();
+}
+
+
+/* ---------- the pages the live server serves ---------- */
+
+async function testServerPages() {
+  const pages = require(path.join(ROOT, "tools", "pages.js"));
+  const ctx = pages.context();
+
+  const landing = pages.landing(ctx);
+  assert.match(landing, /<title>ParsiChin/, "landing page has a title");
+  assert.ok(!/undefined|NaN/.test(landing), "landing page has no undefined/NaN placeholders");
+  assert.match(landing, /href="\/demo\/"/, "landing page links to the lab");
+  assert.match(landing, /href="\/download\/"/, "landing page links to the downloads");
+  const fileBlocks = (landing.match(/class="file[ "]/g) || []).length;
+  assert.strictEqual(fileBlocks, 6, "landing page lists all six bundles (got " + fileBlocks + ")");
+
+  const downloads = pages.downloads(ctx);
+  assert.ok(!/undefined|NaN/.test(downloads), "download page has no undefined/NaN placeholders");
+  for (const b of pages.BUNDLES) {
+    assert.ok(downloads.indexOf(b.file) !== -1, "download page lists " + b.file);
+    const info = ctx.files.find((f) => f.file === b.file);
+    assert.ok(info && info.exists, b.file + " exists on disk");
+    assert.match(info.sha, /^[0-9a-f]{12}$/, b.file + " has a sha256");
+  }
+
+  const theme = pages.theme();
+  assert.ok(theme.length > 2000, "the shared theme is served");
+  assert.strictEqual((theme.match(/{/g) || []).length, (theme.match(/}/g) || []).length,
+    "theme CSS has balanced braces");
+
+  const lab = read("demo/index.html");
+  assert.match(lab, /site-theme\.css/, "the lab uses the shared theme");
+  ["engine", "ext", "mode", "hostile", "container", "site", "font", "rerun", "chat", "score",
+   "results", "filter-all", "filter-fail",
+   "dl-build-url", "dl-zip-url", "dl-patch-url", "dl-commits-url", "dl-commands-url"].forEach((id) => {
+    assert.ok(lab.indexOf('id="' + id + '"') !== -1, "the lab kept the hook #" + id);
+  });
+  console.log("✔ server pages test passed — landing, downloads and lab markup are consistent");
 }
 
 main().catch((err) => {
