@@ -59,27 +59,29 @@ cd ParsiChin
 # 6) install, test, build
 # ------------------------------------------------------------------
 npm install
-npm test        # jsdom tests + one regression test per fixed RTL defect
+npm test        # jsdom tests (smoke, UI, permissions) + one regression per fixed defect
 npm run check   # JSON / JS syntax / required files
 npm run build   # dist/parsi-chin-v0.2.0.zip  -> load unpacked in chrome://extensions
 
 # ------------------------------------------------------------------
-# 7) live RTL lab
+# 7) live server: overview + RTL lab + downloads
 # ------------------------------------------------------------------
-npm run demo    # http://localhost:8080/   (downloads at /download/)
+npm run demo    # http://localhost:8080/          overview page
+                #   /demo/       RTL lab (measures in your browser)
+                #   /download/   every bundle with size + sha256
 
 # ------------------------------------------------------------------
 # 8) optional: real-browser RTL audit (needs a Chrome/Chromium binary)
 # ------------------------------------------------------------------
 npm i -D playwright-core
 npx playwright install chromium
-npm run audit:rtl -- --strict    # 95 probes, expect 0 failing
+npm run audit:rtl -- --strict    # 114 probes, expect 0 failing
 ```
 
 Notes
 
 * If `curl` answers 401/403, the preview is private to your browser session: use the
-  download cards on the lab page (`/download/`) instead — the files are the same.
+  download cards on `/download/` or on the lab page instead — the files are the same.
 * `manifest.json` version is `0.2.0`; the unpacked folder from step 3 can be loaded
   directly via chrome://extensions → Developer mode → Load unpacked.
 * Patches are binary-safe (`git format-patch --binary`), so `git am` reproduces the

@@ -5,7 +5,7 @@ this project uses semantic versioning.
 
 ## [0.2.0] — RTL engine rewrite
 
-Fixes every defect found by the new browser audit; the same 95-probe fixture fails **22 → 0**.
+Fixes every defect found by the new browser audit; the same fixture fails **35 → 0** of 114 probes.
 
 ### Fixed
 
@@ -47,6 +47,16 @@ Fixes every defect found by the new browser audit; the same 95-probe fixture fai
      specificity than `.pc-rtl` could still win. Decorated blocks now also get an inline
      `direction`/`text-align` with `!important` (inline `!important` beats every author rule),
      and the element's own original `dir` **and** inline values are restored on cleanup.
+* **The live server is now a real site.** `/` is an overview page (what was broken, the numbers,
+  every bundle with size and sha256, quick start), `/download/` lists every deliverable with
+  checksums and absolute URLs, and the lab moved to its own page. Both pages and the lab share one
+  design system (`demo/site-theme.css`), the pages are built from the working tree so they can never
+  show a stale file, and `tools/pages.js` is re-read on change (no restart while editing).
+* **The lab measures the reporter's own case.** The mock chat now contains the user's *sent message*
+  bubble next to the assistant's answer (probes `own-message`, `own-message-2`), so "the font changes
+  but my own message stays LTR" is covered by the browser lab, not just by the audit fixtures. The
+  lab also gained a results filter, live score chips (scan root, decorated blocks) and a composer that
+  demonstrates that the input box is deliberately never touched.
 * **Diagnostics.** `ParsiChin.report()` / `ParsiChin.reportJson()` (printable from the page
   console) list the settings, the scan root that was used, how many blocks were decorated and
   — most usefully — Persian-looking blocks that were *not* decorated, with the reason and the
