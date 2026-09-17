@@ -2,9 +2,9 @@ ParsiChin — commit log
 ==========================
 
 Base commit : 9f5fa71  (the commit this work started from)
-Head        : 2a45e42  docs: every site by default
-Commits     : 59
-Files       : 64 changed
+Head        : 5dc78db  docs: store screenshots
+Commits     : 61
+Files       : 65 changed
 
 Every commit is pushed to the branch arena/01a0b0f4-parsichin (pull request #1) and the
 whole change set is also available as one patch that replays onto the base commit:
@@ -23,6 +23,8 @@ The change set is grouped into six commits; run:
 ------------------------------------------------------------------------------
 Applied commits (newest first)
 ------------------------------------------------------------------------------
+  5dc78db  2026-09-17 22:58  docs: store screenshots
+  6cd3bd4  2026-09-17 22:58  docs: refresh commit log
   2a45e42  2026-09-17 22:58  docs: every site by default
   e0e19bc  2026-09-17 22:56  chore: v0.2.1
   c10d18c  2026-09-17 22:56  test: default all sites
@@ -89,9 +91,10 @@ The same change set, grouped the way commit-all.sh commits it
 
 [1/6] git commit -m "fix: optional host permission"
 
-  git add src/options/options.js src/background/service-worker.js src/shared/defaults.js manifest.json
+  git add src/options/options.js src/options/options.html src/background/service-worker.js src/shared/defaults.js manifest.json
       manifest.json
       src/background/service-worker.js
+      src/options/options.html
       src/options/options.js
       src/shared/defaults.js
 
@@ -152,6 +155,7 @@ The same change set, grouped the way commit-all.sh commits it
       docs/img/downloads.png
       docs/img/lab.png
       docs/img/landing.png
+      docs/img/popup-limited.png
       docs/img/popup.png
       docs/rtl-audit-after.json
       docs/rtl-audit-before.json
