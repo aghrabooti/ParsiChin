@@ -5,6 +5,19 @@ This release contains five commits, one per concern. Each block below lists the
 files it touches and the individual changes it contains, so the history can be
 reviewed (or replayed) commit by commit.
 
+Applied commits on branch arena/01a0b0f4-parsichin
+--------------------------------------------------------------------------
+ebe6ac0  fix(rtl): decide one direction per block from content, not dir=auto
+0d58b86  test(rtl): add a headless-browser audit and regression tests
+821fa7a  feat(demo): add the live RTL lab
+9923457  docs(rtl): root-cause audit, screenshots and English docs
+99d59f2  chore(release): v0.2.0
+(base: 9f5fa71 "test(smoke): enhance smoke tests for DeepSeek layout and Persian text handling")
+
+The same five commits are available as a reviewable patch file:
+  ParsiChin-v0.2.0.patch   (git format-patch --binary 9f5fa71..HEAD)
+
+
 Every commit leaves the tree green: `npm test`, `npm run check` and
 `npm run audit:rtl` pass at the end of each one.
 
