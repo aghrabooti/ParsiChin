@@ -1,60 +1,52 @@
-# نقشه‌ی راه ParsiChin — با کامیت‌های پیشنهادی
+# ParsiChin roadmap
 
-> ساختار فعلی طوری طراحی شده که فازبندی زیر **روی همان فایل‌ها** قابل انجام باشد
-> و هر کامیت مستقل باشد. کامیت‌ها را پیشنهادی بگیرید؛ خودتان ترتیب و پیام‌ها را
-> مطابق سلیقه‌تان تغییر دهید. بعد از هر فاز: `npm run check` و در صورت نیاز `npm test`.
+Suggested phases, each one a set of small, independent commits. Run `npm test` and
+`npm run check` after every phase.
 
-## فاز ۰ — بستر (همین ساختار)
+## Phase 0 — foundation (shipped, v0.1.0)
 
-کامیت‌های پیشنهادی (به‌ترتیب؛ هر کدام را جداگانه بزنید):
+* `feat: scaffold MV3 extension with shared settings & service worker`
+* `feat: bidi detection, per-site rules and live decoration of Persian text`
+* `feat: popup with site status and full options page with live preview`
+* `chore: build/check scripts, smoke tests and docs`
 
-1. **ساختار و مانیفست**
-   ```
-   git add manifest.json _locales assets/icons src/background src/shared
-   git commit -m "feat: scaffold MV3 extension with shared settings & service worker"
-   ```
-2. **هسته‌ی شناسایی و اعمال**
-   ```
-   git add src/content/bidi.js src/content/rules.js src/content/entry.js styles/parsi-chin.css styles/fonts
-   git commit -m "feat: bidi detection, per-site rules and live decoration of Persian text"
-   ```
-3. **رابط کاربری**
-   ```
-   git add src/popup src/options
-   git commit -m "feat: popup with site status and full options page with live preview"
-   ```
-4. **ابزار توسعه و تست**
-   ```
-   git add scripts tests package.json README.md ROADMAP.md CONTRIBUTING.md LICENSE
-   git commit -m "chore: build/check scripts, smoke tests and docs"
-   ```
+## Phase 1 — RTL correctness (shipped, v0.2.0)
 
-## فاز ۱ — ثبات (باید قبل از انتشار)
+* [x] audit the real rendering in a browser and document the root causes (`docs/rtl-audit.md`)
+* [x] replace `dir="auto"` with content-based direction decided once per block
+* [x] stop counting digits, ZWNJ/ZWJ and LRM/RLM as Persian "letters"
+* [x] flip list containers with their items so bullets stay next to the text
+* [x] pin English content inside flipped containers (DeepSeek `.ds-markdown`)
+* [x] survive `direction: ltr !important` site stylesheets
+* [x] process very long paragraphs (the old 30 000-character guard skipped them)
+* [x] add a headless-browser audit tool and a live lab
+* [ ] run the audit against the five real sites and fix site-specific selectors
 
-- [ ] تست روی ۵ سایت واقعی؛ ثبت مشکلات در `issues` (پوشه‌ی `docs/site-notes/` برای یادداشت هر سایت)
-- [ ] حل تداخل با حالت‌های dark و RTL خود سایت‌ها
-- [ ] `MutationObserver`: فقط تفاوت‌های واقعی را پردازش کند (already وجود دارد؛ performance test با پاسخ‌های بلند)
-- [ ] در صورت کندی، `walk` را با انتخابگر مستقیم (فقط TEXT_BLOCK_TAGS + div/span دارای متن مستقیم) محدود کنید
-- [ ] ثبت دقیق‌تر `root` هر سایت (الان `main` است؛ برای سایت‌هایی که محتوا خارج از `main` است اصلاح شود)
+## Phase 2 — robustness
 
-## فاز ۲ — قابلیت‌ها
+- [ ] Shadow DOM traversal (ChatGPT and others moved parts of the UI into shadow roots)
+- [ ] frame support (`all_frames` + per-frame roots) for embedded chat widgets
+- [ ] narrow `MutationObserver` processing to batches + `requestIdleCallback` for long conversations
+- [ ] RTL tables as an opt-in (reverse column order)
+- [ ] per-site "report a problem" that copies the classification debug info
 
-- [ ] اسکن متن‌های داخل `iframe` (با `all_frames` و قواعد جدا)
-- [ ] دکمه‌ی «اعمال روی این صفحه» با highlight بلوک‌های تغییرکرده
-- [ ] فونت‌های فارسی جایگزین (Vazir، Estedad، IRANSans) با انتخاب در تنظیمات
-- [ ] واژه‌نامه‌ی رفع ابهام: جداکننده‌ی کلمات فارسی/انگلیسی (ZWNJ) در فونت وزیرمتن
-- [ ] عادی‌سازی علائم نگارشی قوی‌تر (؟ ! . و اعداد فارسی) پشت پرچم آزمایشی
-- [ ] حالت «فقط متن کاربر» (تشخیص پیام‌های user vs assistant)
+## Phase 3 — features
 
-## فاز ۳ — انتشار
+- [ ] alternative Persian fonts (Vazir, Estedad, IRANSans) selectable in settings
+- [ ] ZWNJ-aware word join fix-up for Latin/Persian boundaries
+- [ ] stronger punctuation normalization (؟ ! . and Persian digits) behind the experimental flag
+- [ ] "user messages only" mode (user vs assistant detection)
+- [ ] right-click → "ParsiChin this block" manual override
 
-- [ ] صفحه‌ی `chrome://extensions` → آیکون و نام کامل (fa/en)
-- [ ] آپلود در Chrome Web Store: توضیحات، اسکرین‌شات، سیاست حریم خصوصی (بدون جمع‌آوری داده)
-- [ ] نسخه‌ی Firefox (MV3/WebExtensions، تفاوت `action` و `browser`)
-- [ ] `git tag v0.2.0 && git push --tags` + انتشار در GitHub Releases با zip ساخته‌شده
+## Phase 4 — release
 
-## ایده‌های آینده
+- [ ] Chrome Web Store listing: description, screenshots, privacy policy (no data collection)
+- [ ] Firefox port (MV3/WebExtensions; `action` vs `browser` namespace differences)
+- [ ] localize the popup/options UI (currently Persian-only) and the `_locales` strings
+- [ ] `git tag v0.3.0 && git push --tags`, publish the build script's zip as a release artifact
 
-- OCR/انتخاب دستی بلوک توسط کاربر (راست‌کلیک → «پارسی‌چین روی این بلوک»)
-- ترجمه‌ی درجا و نمایش دوگانه (فارسی + انگلیسی) برای پاسخ‌های انگلیسی
-- تنظیمات همگام‌سازی با `chrome.storage.sync`
+## Ideas
+
+- in-place bilingual display (Persian + English side by side) for English answers
+- OCR / manual block selection
+- `chrome.storage.sync` for settings
