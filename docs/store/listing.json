@@ -1,0 +1,58 @@
+{
+  "name": "ParsiChin — Mixed Persian Text Fixer",
+  "summary": "Makes mixed Persian/English answers on AI chat sites read right-to-left, without breaking the English text.",
+  "category": "Accessibility",
+  "language": "English",
+  "homepage": "https://github.com/aghrabooti/ParsiChin",
+  "support": "https://github.com/aghrabooti/ParsiChin/issues",
+  "description": [
+    "ParsiChin fixes the direction of Persian text on AI chat sites.",
+    "",
+    "Ask ChatGPT, Claude, Gemini, DeepSeek, Copilot, Perplexity or Mistral a question in Persian and the answer often comes back laid out left-to-right: the lines start on the wrong side, bullets jump to the left, and mixed sentences break in the middle. ParsiChin reads the characters of each text block and sets the direction that belongs there — Persian right-to-left, English left-to-right — block by block, without touching anything else on the page.",
+    "",
+    "WHAT IT DOES",
+    "• Right-to-left layout for Persian answers, including answers that start with an English word such as “API” or “React”.",
+    "• English stays left-to-right — even inside a Persian answer, and even when a site forces direction: ltr !important on its own containers.",
+    "• List bullets, table cells and multi-line paragraphs follow their own text instead of the page.",
+    "• Optional Persian-friendly font (Vazirmatn, bundled — no downloads at runtime) with adjustable size.",
+    "• Per-site control: the ten supported AI chat sites work out of the box, and you can add any other site yourself.",
+    "• “All sites” mode requests the additional permission only when you switch it on.",
+    "",
+    "HOW IT WORKS",
+    "The extension classifies every text block from its own characters (Persian letters, Latin letters, digits, punctuation) and applies the direction once per block. Latin-heavy blocks that live inside a Persian container are pinned back to left-to-right, so nothing that was readable becomes unreadable.",
+    "",
+    "PRIVACY",
+    "No data is collected, stored remotely or sent anywhere. There are no analytics, no accounts and no network requests. Settings are kept in the browser's local extension storage. The extension needs no content from your pages beyond the text it measures in the page itself to decide the direction.",
+    "",
+    "SUPPORTED SITES (out of the box)",
+    "ChatGPT, Claude, Gemini, Perplexity, DeepSeek, Microsoft Copilot, Mistral, HuggingChat and openai.com — plus any site you enable from the options page.",
+    "",
+    "OPEN SOURCE",
+    "The full source, the browser audit that measures the behaviour and the RTL lab that reproduces it are public at https://github.com/aghrabooti/ParsiChin (MIT)."
+  ],
+  "singlePurpose": "ParsiChin changes the text direction and alignment of Persian and mixed Persian/English text blocks on AI chat web pages so that Persian readers can read them, and optionally applies a Persian-friendly font to that text.",
+  "permissionJustifications": {
+    "storage": "Stores the user's settings (font, font size, apply mode, per-site enable list) in the browser's local extension storage. Nothing is transmitted anywhere.",
+    "scripting": "Registers the content script on sites the user enables beyond the built-in list (custom sites and “all sites” mode). The script only sets direction/alignment/font on text blocks in the page; it does not collect or send page content.",
+    "tabs": "Reads the URL of the active tab so the popup can tell whether the extension is active on the current site and show how many text blocks were adjusted on that page.",
+    "host_permissions (optional *://*/*)": "Requested only when the user turns on “all sites” or adds a custom site, because the extension can only adjust text on pages it is allowed to run on. It is optional: without it the extension runs only on the ten built-in AI chat sites listed in the manifest.",
+    "remote_code": "None. All JavaScript, CSS and fonts are contained in the uploaded package; the extension never loads or executes remote code."
+  },
+  "dataUsage": {
+    "collects_user_data": false,
+    "sells_data": false,
+    "uses_data_for_ads": false,
+    "note": "No network requests at all: no analytics, no telemetry, no remote config."
+  },
+  "assets": {
+    "store_icon": "assets/icons/icon128.png",
+    "screenshots": [
+      "docs/store/store-1-chat-rtl.png",
+      "docs/store/store-2-lab.png",
+      "docs/store/store-3-overview.png"
+    ],
+    "small_promo_tile": "docs/store/promo-440x280.png",
+    "marquee": "docs/store/marquee-1400x560.png",
+    "package": "dist/parsi-chin-v0.2.0.zip"
+  }
+}
