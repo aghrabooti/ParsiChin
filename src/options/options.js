@@ -34,7 +34,8 @@
   const ALL_ORIGINS = ["*://*/*"];
 
   const HINT_PERMISSION_DENIED =
-    "⚠️ دسترسی «همه‌ی سایت‌ها» رد شد — این حالت بدون آن کار نمی‌کند.";
+    "⚠️ دسترسی «همه‌ی سایت‌ها» در دسترس نیست — یا در chrome://extensions محدود شده یا رد شده. " +
+    "از همان صفحه «Site access» را روی «On all sites» بگذارید.";
   const HINT_SYNC_FAILED =
     "⚠️ فعال‌سازی خودکار ممکن نشد؛ افزونه را در chrome://extensions دوباره بارگذاری کنید.";
 

@@ -25,9 +25,11 @@
   const ALL_ORIGINS = ["*://*/*"];
 
   function setButtons(state) {
-    // state: "hide" when the page is already covered, otherwise "show"
-    const box = $("#enableBox");
-    box.hidden = state === "hide";
+    // "hide"    — the page is covered by the built-in list or "all sites"
+    // "enable"  — unknown host: offer the one-click enable
+    // "off"     — the user switched this host off: offer to switch it back on
+    $("#enableBox").hidden = state !== "enable";
+    $("#offBox").hidden = state !== "off";
   }
 
   function setHint(text, isError) {
@@ -83,6 +85,17 @@
     await refresh();
   }
 
+  async function turnOnThisSite() {
+    const tab = await currentTab();
+    const host = tab ? hostOf(tab.url) : "";
+    if (!host) return;
+    const res = await chrome.runtime.sendMessage({
+      type: "parsi-chin:toggle-site", host: host, enabled: true, tabId: tab.id
+    });
+    $("#offHint").textContent = res && res.ok ? "روشن شد — بدون نیاز به رفرش." : "ناموفق بود.";
+    await refresh();
+  }
+
   async function currentTab() {
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -123,9 +136,14 @@
 
     const rule = window.ParsiChin.rules.ruleForHost(hostname);
 
+    const blocked = hostname && hostBlocked(hostname, settings.siteOverrides);
+
     if (!settings.enabled) {
       setStatus("off", "غیرفعال", "برای فعال شدن، کلید بالا را روشن کنید.");
       setButtons("hide");
+    } else if (blocked) {
+      setStatus("off", hostname, "این سایت را خودتان خاموش کرده‌اید.");
+      setButtons("off");
     } else if (rule && !hostBlocked(hostname, settings.siteOverrides)) {
       setStatus("ok", rule.name, "این صفحه پشتیبانی می‌شود — متن‌های فارسی تزئین می‌شوند.");
       setButtons("hide");
@@ -140,7 +158,7 @@
     } else {
       setStatus("", hostname || "این صفحه پشتیبانی نمی‌شود",
         "با یک کلیک می‌توانید همین سایت را فعال کنید — بدون رفرش و بدون تنظیمات.");
-      setButtons("show");
+      setButtons("enable");
     }
 
     // Live diagnostics: how many blocks did the content script decorate?
@@ -171,6 +189,7 @@
     });
     $("#enableSite").addEventListener("click", function () { enableOnThisSite(); });
     $("#enableAll").addEventListener("click", function () { enableOnAllSites(); });
+    $("#turnOnSite").addEventListener("click", function () { turnOnThisSite(); });
     $("#feedback").addEventListener("click", function () {
       window.open("https://github.com/aghrabooti/ParsiChin/issues", "_blank", "noopener");
     });
