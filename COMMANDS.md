@@ -44,11 +44,16 @@ cd ParsiChin
 # git -c user.name=me -c user.email=me@example.com am --3way ../ParsiChin-v0.2.0.patch
 
 # ------------------------------------------------------------------
-# 5b) or commit the changes yourself with short messages
+# 5b) commit the changes on GitHub under YOUR name
 # ------------------------------------------------------------------
-# (see commit-all.sh — 5 groups, one commit each)
-# git reset --soft 9f5fa71 && git reset     # keep the changes, drop the history
-# bash commit-all.sh
+# git clone https://github.com/aghrabooti/ParsiChin.git && cd ParsiChin
+# git config user.name  "Your Name"
+# git config user.email "you@example.com"          # the email of your GitHub account
+# git fetch origin arena/01a0b0f4-parsichin        # bring the changes in...
+# git checkout -b rtl-fix origin/main              # ...on top of main
+# git checkout FETCH_HEAD -- . && git reset        # ...as UNCOMMITTED edits
+# bash commit-all.sh                               # 5 short commits, authored by you
+# git push -u origin rtl-fix                       # or: git push origin HEAD:main
 
 # ------------------------------------------------------------------
 # 6) install, test, build
