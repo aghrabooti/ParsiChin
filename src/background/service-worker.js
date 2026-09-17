@@ -8,7 +8,9 @@
  * Responsibilities:
  *  1. initialize settings on install,
  *  2. update the toolbar badge,
- *  3. register/unregister dynamic content scripts for custom sites.
+ *  3. register/unregister dynamic content scripts for custom sites / "all sites",
+ *  4. turn the extension on for the page the user is looking at, immediately
+ *     (used by the popup's "enable on this site" button).
  */
 "use strict";
 
@@ -150,6 +152,27 @@ chrome.storage.onChanged.addListener(function (changes, areaName) {
   if (next) registerDynamicScripts(mergeSettings(DEFAULT_SETTINGS, next)).catch(() => {});
 });
 
+/**
+ * Inject the content script into one tab right now, so enabling the extension
+ * for a page does not require a reload. Needs host permission for that tab,
+ * which the caller (the popup) requests on a user gesture first.
+ */
+async function injectInto(tabId) {
+  await chrome.scripting.executeScript({
+    target: { tabId: tabId },
+    files: [
+      "src/shared/defaults.js",
+      "src/shared/settings.js",
+      "src/content/bidi.js",
+      "src/content/rules.js",
+      "src/content/entry.js"
+    ]
+  });
+  try {
+    await chrome.scripting.insertCSS({ target: { tabId: tabId }, files: ["styles/parsi-chin.css"] });
+  } catch (e) { /* injecting twice is harmless, the stylesheet is idempotent */ }
+}
+
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (!message) return;
 
@@ -164,6 +187,47 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
         return saveSettings({ enabled: !settings.enabled });
       })
       .then(function () { return refreshBadge(); })
+      .then(function () { sendResponse({ ok: true }); })
+      .catch(function (err) { sendResponse({ ok: false, error: String(err) }); });
+    return true;
+  }
+
+  /* "Enable on this site": add the host to the custom list and (re)register. */
+  if (message.type === "parsi-chin:enable-site") {
+    const host = String(message.host || "").replace(/^www\./, "");
+    if (!host) {
+      sendResponse({ ok: false, error: "no host" });
+      return true;
+    }
+    getSettings()
+      .then(function (settings) {
+        const list = (settings.customSites || []).slice();
+        if (list.indexOf(host) === -1) list.push(host);
+        return saveSettings({ customSites: list });
+      })
+      .then(registerDynamicScripts)
+      .then(function () {
+        return message.tabId ? injectInto(message.tabId) : null;
+      })
+      .then(function () { sendResponse({ ok: true, host: host }); })
+      .catch(function (err) { sendResponse({ ok: false, error: String(err) }); });
+    return true;
+  }
+
+  /* "Enable on all sites": flip the mode and register for every origin. */
+  if (message.type === "parsi-chin:enable-all") {
+    saveSettings({ allSites: true })
+      .then(registerDynamicScripts)
+      .then(function () {
+        return message.tabId ? injectInto(message.tabId) : null;
+      })
+      .then(function () { sendResponse({ ok: true }); })
+      .catch(function (err) { sendResponse({ ok: false, error: String(err) }); });
+    return true;
+  }
+
+  if (message.type === "parsi-chin:inject") {
+    injectInto(message.tabId)
       .then(function () { sendResponse({ ok: true }); })
       .catch(function (err) { sendResponse({ ok: false, error: String(err) }); });
     return true;

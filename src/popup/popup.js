@@ -21,6 +21,77 @@
     }
   }
 
+  /** Host patterns for the optional permission — must match the manifest. */
+  const ALL_ORIGINS = ["*://*/*"];
+
+  function setButtons(state) {
+    // state: "hide" when the page is already covered, otherwise "show"
+    const box = $("#enableBox");
+    box.hidden = state === "hide";
+  }
+
+  function setHint(text, isError) {
+    const hint = $("#enableHint");
+    hint.textContent = text || "";
+    hint.classList.toggle("error", !!isError);
+  }
+
+  /**
+   * Ask Chrome for host access. A single-origin pattern is a subset of the
+   * manifest's optional host patterns, so requesting the narrow pattern keeps
+   * the prompt honest; if Chrome refuses it (older builds), fall back to the
+   * full pattern, which is what earlier versions had to do.
+   */
+  async function requestOrigins(origins) {
+    try {
+      if (await chrome.permissions.request({ origins: origins })) return true;
+    } catch (e) { /* fall through */ }
+    try {
+      return await chrome.permissions.request({ origins: ALL_ORIGINS });
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function enableOnThisSite() {
+    const tab = await currentTab();
+    const host = tab ? hostOf(tab.url) : "";
+    if (!host) return;
+    setHint("منتظر تأیید دسترسی از طرف کروم…");
+    const ok = await requestOrigins(["*://" + host + "/*"]);
+    if (!ok) {
+      setHint("کروم دسترسی این سایت را نداد. می‌توانید از تنظیمات کامل سایت را اضافه کنید.", true);
+      return;
+    }
+    const res = await chrome.runtime.sendMessage({
+      type: "parsi-chin:enable-site", host: host, tabId: tab.id
+    });
+    setHint(res && res.ok ? "فعال شد — همین حالا، بدون نیاز به رفرش." : "فعال‌سازی ناموفق بود.", !(res && res.ok));
+    await refresh();
+  }
+
+  async function enableOnAllSites() {
+    const tab = await currentTab();
+    setHint("منتظر تأیید دسترسی «همه‌ی سایت‌ها»…");
+    const ok = await requestOrigins(ALL_ORIGINS);
+    if (!ok) {
+      setHint("کروم دسترسی «همه‌ی سایت‌ها» را نداد.", true);
+      return;
+    }
+    const res = await chrome.runtime.sendMessage({ type: "parsi-chin:enable-all", tabId: tab && tab.id });
+    setHint(res && res.ok ? "حالت «همه‌ی سایت‌ها» روشن شد — بدون نیاز به رفرش." : "فعال‌سازی ناموفق بود.", !(res && res.ok));
+    await refresh();
+  }
+
+  async function currentTab() {
+    try {
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      return (tabs && tabs[0]) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   function setStatus(className, siteName, detail) {
     const dot = $("#siteDot");
     dot.className = "dot" + (className ? " " + className : "");
@@ -54,12 +125,22 @@
 
     if (!settings.enabled) {
       setStatus("off", "غیرفعال", "برای فعال شدن، کلید بالا را روشن کنید.");
+      setButtons("hide");
     } else if (rule && !hostBlocked(hostname, settings.siteOverrides)) {
       setStatus("ok", rule.name, "این صفحه پشتیبانی می‌شود — متن‌های فارسی تزئین می‌شوند.");
+      setButtons("hide");
     } else if (settings.allSites) {
       setStatus("ok", "همه‌ی سایت‌ها", "حالت «همه‌ی سایت‌ها» فعال است؛ متن‌های فارسی تزئین می‌شوند.");
+      setButtons("hide");
+    } else if ((settings.customSites || []).some(function (key) {
+      return window.ParsiChin.rules.hostMatchesRule(hostname, key);
+    })) {
+      setStatus("ok", hostname || "این سایت", "این سایت را خودتان فعال کرده‌اید.");
+      setButtons("hide");
     } else {
-      setStatus("", "این صفحه پشتیبانی نمی‌شود", "سایت را از تنظیمات اضافه کنید یا حالت «همه سایت‌ها» را فعال کنید.");
+      setStatus("", hostname || "این صفحه پشتیبانی نمی‌شود",
+        "با یک کلیک می‌توانید همین سایت را فعال کنید — بدون رفرش و بدون تنظیمات.");
+      setButtons("show");
     }
 
     // Live diagnostics: how many blocks did the content script decorate?
@@ -88,6 +169,8 @@
     $("#openOptions").addEventListener("click", function () {
       chrome.runtime.openOptionsPage();
     });
+    $("#enableSite").addEventListener("click", function () { enableOnThisSite(); });
+    $("#enableAll").addEventListener("click", function () { enableOnAllSites(); });
     $("#feedback").addEventListener("click", function () {
       window.open("https://github.com/aghrabooti/ParsiChin/issues", "_blank", "noopener");
     });
