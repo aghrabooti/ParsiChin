@@ -1,0 +1,184 @@
+ParsiChin v0.2.0 — commit log
+=============================
+
+This release contains five commits, one per concern. Each block below lists the
+files it touches and the individual changes it contains, so the history can be
+reviewed (or replayed) commit by commit.
+
+Every commit leaves the tree green: `npm test`, `npm run check` and
+`npm run audit:rtl` pass at the end of each one.
+
+==========================================================================
+COMMIT 1/5 — fix(rtl): decide one direction per block from content, not dir=auto
+==========================================================================
+Files: src/content/bidi.js, src/content/rules.js, src/content/entry.js,
+       styles/parsi-chin.css
+Command:
+  git add src/content/bidi.js src/content/rules.js src/content/entry.js \
+          styles/parsi-chin.css
+  git commit -m "fix(rtl): decide one direction per block from content, not dir=auto"
+
+Changes
+-------
+src/content/bidi.js
+  * LETTER_RANGES replaces the "everything in the Arabic block counts as a
+    letter" ranges: digits, ZWNJ/ZWJ, LRM/RLM and Arabic punctuation no longer
+    count. Fixes numbers-only blocks being classified as Persian (ratio 1.00).
+  * persianWordCount(): counts runs of >= 2 Persian letters, so the conjunction
+    "و" inside a Latin list is not mistaken for Persian prose.
+  * classify() returns { kind, ratio, persianWords, direction }; a block is
+    Persian-dominant when ratio >= 0.5, or ratio >= 0.25 with a real Persian
+    word (Latin-heavy Persian prose such as "با React و ... می‌توان").
+  * directionFor("mixed") is now a stable "ltr" instead of "auto".
+  * isPersianLetter / isLatinLetter / isBidiControl helpers exported.
+
+src/content/rules.js
+  * UL/OL added to TEXT_BLOCK_TAGS so list containers are flipped with items.
+  * isCodeOnly(): wrappers whose every text node lives in pre/code/kbd/samp are
+    no longer text blocks (e.g. <p><code>"سلام" = 1;</code></p>).
+  * CODE_TAGS and isCodeOnly exported for the content script and tests.
+
+src/content/entry.js
+  * One direction per block, applied twice: a `dir` attribute and the
+    .pc-rtl / .pc-ltr class that the stylesheet keys on. dir="auto" is gone.
+  * pinLtr(): English-only content inside a block flipped to RTL is pinned back
+    to LTR without being restyled (containment, e.g. DeepSeek .ds-markdown).
+  * walk() tracks whether an ancestor was flipped and passes it down.
+  * The 30 000-character guard now only skips giant containers, not long
+    paragraphs (isTextishTag decides).
+  * refresh() can correct a direction that changed while an answer streamed,
+    instead of only upgrading "none -> mixed -> persian".
+  * cleanup() also removes pc-list/pc-ltr/pc-rtl and the pin marker.
+
+styles/parsi-chin.css
+  * .pc-rtl / .pc-ltr are the single source of truth with !important rules and
+    higher specificity, so a site's `direction: ltr !important` cannot win.
+  * unicode-bidi: plaintext removed — it re-resolved the base direction for
+    every line (Latin line left, Persian line right) and made the layout flip
+    while text streamed in.
+  * List rules flip the container and move the marker indent to the inline
+    start edge, so bullets sit next to a right-aligned item.
+  * [dir="rtl"|"ltr"] fallbacks kept for engines that read the attribute.
+  * Code block font stack gained the bundled Persian font as a last-resort
+    fallback (systems whose monospace font has no Arabic glyphs).
+
+==========================================================================
+COMMIT 2/5 — test(rtl): add a headless-browser audit and regression tests
+==========================================================================
+Files: tools/rtl-audit.js, tests/smoke.test.js
+Command:
+  git add tools/rtl-audit.js tests/smoke.test.js
+  git commit -m "test(rtl): add a headless-browser audit and regression tests"
+
+Changes
+-------
+tools/rtl-audit.js (new)
+  * Loads the real content scripts and the real stylesheet into a mock chat
+    page inside headless Chromium and measures five scenarios: plain UI,
+    DeepSeek-style .ds-markdown container, site CSS with `direction: ltr`,
+    the same with `!important`, and a natively RTL page.
+  * Measures base direction and alignment with Persian/Latin <bdi> sentinels
+    (bidi-isolated, ignored by the extension), list-marker side per list, and a
+    per-line flip-flop probe; judges each probe against the expected direction.
+  * `--json` for machine-readable reports, `--strict` to exit 1 on failures;
+    degrades to a friendly skip message when no browser is available.
+  * Result on the same fixture: 22 failing probes before the fix, 0 after.
+
+tests/smoke.test.js
+  * Regression assertions, one per defect fixed in commit 1/5:
+      - numbers-only block stays untouched (digits are not Persian letters);
+      - code-only paragraph is never flipped;
+      - a Latin list joined by "و" stays LTR;
+      - Latin-heavy Persian prose is RTL, not the first-strong-character LTR;
+      - the list container (pc-list + pc-rtl) is flipped with its items;
+      - an English paragraph inside an RTL container is pinned to LTR and is
+        not restyled;
+      - a ~62 000-character paragraph is still decorated;
+      - classify()/persianWordCount()/directionFor() unit expectations.
+
+==========================================================================
+COMMIT 3/5 — feat(demo): add the live RTL lab
+==========================================================================
+Files: demo/index.html, demo/demo-lab.css, demo/demo-lab.js, demo/chat.html,
+       demo/demo-chat.css, demo/chat-boot.js, demo/legacy/*, tools/serve.js
+Command:
+  git add demo tools/serve.js
+  git commit -m "feat(demo): add the live RTL lab"
+
+Changes
+-------
+  * demo/index.html + demo-lab.*: an English lab page that embeds the mock chat
+    and renders the same PASS/FAIL table as tools/rtl-audit.js from the
+    measurements taken in the visitor's own browser.
+  * demo/chat.html + demo-chat.css: the mock AI answer with one probe per
+    defect (Persian prose, Latin-heavy Persian prose, Latin list, English
+    paragraph, code-only and digits-only blocks, zig-zag block, Persian list,
+    inline code, table cells, DeepSeek container, per-element hostile style).
+  * demo/chat-boot.js: stubs chrome.*, loads either the current sources or the
+    v0.1.0 snapshot, maps localhost to the selected host rule, measures and
+    reports to the parent frame.
+  * demo/legacy/: the v0.1.0 content scripts and stylesheet, exported from git
+    history, so the lab can show the defect and the fix side by side.
+  * The hostile-stylesheet switch uses media="not all" because the `disabled`
+    attribute on <style> is not honoured reliably.
+  * tools/serve.js: dependency-free static server (0.0.0.0, PORT env var) that
+    serves the repository root so /demo, /src, /styles and the fonts resolve.
+
+==========================================================================
+COMMIT 4/5 — docs(rtl): root-cause audit, screenshots and English docs
+==========================================================================
+Files: docs/rtl-audit.md, docs/rtl-audit-before.json, docs/rtl-audit-after.json,
+       docs/img/*.png, README.md, CONTRIBUTING.md, ROADMAP.md, CHANGELOG.md
+Command:
+  git add docs README.md CONTRIBUTING.md ROADMAP.md CHANGELOG.md
+  git commit -m "docs(rtl): root-cause audit, screenshots and English docs"
+
+Changes
+-------
+  * docs/rtl-audit.md: how the audit runs, the six root causes with measurements
+    (dir="auto" first-strong-character resolution, unicode-bidi: plaintext
+    line-by-line resolution, digits/ZWNJ counted as letters, list containers
+    left unflipped, RTL inheritance leaking into English content, the 30 000
+    character guard, and the dir attribute being only a presentational hint),
+    what v0.2.0 changes per file, how to reproduce, and known limitations.
+  * docs/rtl-audit-before.json / -after.json: the raw 95-probe reports
+    (22 failing before, 0 after) used as evidence.
+  * docs/img/before-v0.1.0.png, after-v0.2.0.png, lab.png: rendered proof
+    (right-aligned Persian list with bullets next to the text, code and digits
+    left alone, English paragraph inside a Persian container keeping its
+    punctuation, no per-line flip-flop).
+  * README.md: English rewrite, problem/solution, install, live lab, project
+    layout, supported sites, settings, development commands, limitations.
+  * CONTRIBUTING.md: English rewrite with the direction model as ground rules
+    (never dir="auto", one direction per block, classes carry the styling),
+    testing checklist and the site-adding procedure.
+  * ROADMAP.md: phases restated as shipped / next, with the shadow DOM, frames
+    and UI-localisation work moved into phase 2 and 4.
+  * CHANGELOG.md: new file, 0.2.0 entry listing every fix, addition and change.
+
+==========================================================================
+COMMIT 5/5 — chore(release): v0.2.0
+==========================================================================
+Files: manifest.json, package.json, scripts/ci-check.sh, COMMITS.txt
+Command:
+  git add manifest.json package.json scripts/ci-check.sh COMMITS.txt
+  git commit -m "chore(release): v0.2.0"
+
+Changes
+-------
+  * manifest.json, package.json: version 0.1.0 -> 0.2.0 so the build script
+    produces dist/parsi-chin-v0.2.0.zip.
+  * package.json scripts: `demo` (RTL lab) and `audit:rtl` (browser audit).
+  * scripts/ci-check.sh: one command that runs the static checks, the jsdom
+    tests, the release build and (when a browser is present) the RTL audit.
+  * COMMITS.txt (this file).
+
+==========================================================================
+Verification
+==========================================================================
+  npm test              -> smoke + UI tests pass, including one regression
+                           assertion per defect
+  npm run check         -> JSON, JS syntax and required files
+  npm run build         -> dist/parsi-chin-v0.2.0.zip
+  npm run audit:rtl     -> 95 probes, 0 failing (was 22 failing on v0.1.0)
+  npm run demo          -> http://localhost:8080/ (live lab)
