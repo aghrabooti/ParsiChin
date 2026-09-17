@@ -21,8 +21,9 @@
   </header>
 
   <main class="chat">
-    <div class="bubble assistant">
-      <div class="avatar">AI</div>
+    <div class="row">
+      <div class="bubble assistant">
+        <div class="avatar">AI</div>
       <div class="markdown prose">
 
         <p class="probe" id="fa-pure" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>سلام! این یک پاسخ فارسی است و باید از سمت راست شروع شود.</p>
@@ -73,9 +74,34 @@
 
         <p class="probe" id="fa-hostile" data-flavor="sen" style="direction:ltr"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>سلام! این یک پاسخ فارسی است و باید از سمت راست شروع شود.</p>
 
+        </div>
+      </div>
+    </div>
+
+    <!-- The user's own sent message: the case reported on DeepSeek ("the font of
+         my message changes but the direction never does"). -->
+    <div class="row own">
+      <div class="bubble own-message">
+        <div class="avatar you">You</div>
+        <div class="markdown prose own-md">
+          <p class="probe" id="own-message" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>سلام! این پیام خودم است و باید از سمت راست شروع شود.</p>
+          <p class="probe" id="own-message-2" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>لطفاً کد React را با TypeScript بازنویسی کن.</p>
+        </div>
       </div>
     </div>
   </main>
+
+  <div class="composer">
+    <div class="box">
+      <textarea id="composer" rows="2" placeholder="پیام خود را بنویسید…"></textarea>
+      <button class="send" type="button" disabled>Send</button>
+    </div>
+    <p class="chat-note">
+      The input box is deliberately never restyled or re-directed by the extension — only text blocks
+      that were already rendered (answers and sent messages) are decorated. Typing here should look
+      completely normal.
+    </p>
+  </div>
 
   <script src="chat-boot.js"></script>
 </body>
