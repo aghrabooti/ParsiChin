@@ -44,8 +44,14 @@
     /** Keep <code>/<pre> blocks strictly LTR and monospace. */
     keepCodeLtr: true,
 
-    /** Inject on every website (requires the optional wildcard host permission). */
-    allSites: false,
+    /**
+     * Work on every website, not only the built-in AI chat list.
+     * Default ON: the manifest declares the wildcard host permission, so the
+     * content script already runs everywhere and this only decides whether it
+     * acts. Turn it off to limit the extension to the built-in sites, and use
+     * `siteOverrides` to exclude single hosts either way.
+     */
+    allSites: true,
 
     /** Extra sites injected dynamically, e.g. ["example.com"]. */
     customSites: [],

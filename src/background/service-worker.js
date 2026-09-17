@@ -17,10 +17,10 @@
 const STORAGE_KEY = "parsiChinSettings";
 
 /**
- * Host patterns for the optional permission. MUST equal
- * `optional_host_permissions` in manifest.json: chrome.permissions.contains()
- * and chrome.scripting.registerContentScripts() both reject patterns the
- * manifest does not declare, and <all_urls> is not the same pattern as the
+ * Host patterns for the wildcard access. MUST equal `host_permissions` in
+ * manifest.json: chrome.permissions.contains() and
+ * chrome.scripting.registerContentScripts() both reject patterns the manifest
+ * does not declare, and the <all_urls> spelling is not the same pattern as the
  * manifest's wildcard host pattern (that mismatch made "all sites" mode
  * silently do nothing).
  */
@@ -36,7 +36,7 @@ const DEFAULT_SETTINGS = {
   fontWeight: 400,
   punctuationNormalization: false,
   keepCodeLtr: true,
-  allSites: false,
+  allSites: true,
   customSites: [],
   siteOverrides: {}
 };
@@ -107,6 +107,16 @@ async function registerDynamicScripts(settings) {
 
   const hasAllSitesPermission = await chrome.permissions.contains({ origins: ALL_ORIGINS });
   if (settings.allSites && !hasAllSitesPermission) {
+    // The user restricted site access, and Chrome no longer grants the wildcard.
+    // Custom sites still work through the dynamic registration below.
+    if (customMatches.length === 0) {
+      await unregister();
+      return;
+    }
+  }
+  if (settings.allSites && hasAllSitesPermission) {
+    // Nothing to do: the static content script declared in the manifest already
+    // runs on every page. Registering it again would execute it twice.
     await unregister();
     return;
   }
@@ -173,6 +183,20 @@ async function injectInto(tabId) {
   } catch (e) { /* injecting twice is harmless, the stylesheet is idempotent */ }
 }
 
+/** Ask the content script in a tab to re-read settings right now. */
+async function settingsApplyToTabs(tabId) {
+  const ids = tabId ? [tabId] : [];
+  if (!tabId) {
+    try {
+      const tabs = await chrome.tabs.query({});
+      tabs.forEach(function (t) { if (t.id !== undefined) ids.push(t.id); });
+    } catch (e) { /* no active tabs */ }
+  }
+  await Promise.all(ids.map(function (id) {
+    return chrome.tabs.sendMessage(id, { type: "parsi-chin:apply" }).catch(function () {});
+  }));
+}
+
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
   if (!message) return;
 
@@ -188,6 +212,31 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       })
       .then(function () { return refreshBadge(); })
       .then(function () { sendResponse({ ok: true }); })
+      .catch(function (err) { sendResponse({ ok: false, error: String(err) }); });
+    return true;
+  }
+
+  /* Turn one host on/off, whatever mode is active (used by the popup). */
+  if (message.type === "parsi-chin:toggle-site") {
+    const host = String(message.host || "").replace(/^www\./, "");
+    if (!host) {
+      sendResponse({ ok: false, error: "no host" });
+      return true;
+    }
+    getSettings()
+      .then(function (settings) {
+        const overrides = Object.assign({}, settings.siteOverrides || {});
+        const list = (settings.customSites || []).slice();
+        if (message.enabled) {
+          delete overrides[host];
+          if (list.indexOf(host) === -1) list.push(host);
+        } else {
+          overrides[host] = false;
+        }
+        return saveSettings({ siteOverrides: overrides, customSites: list });
+      })
+      .then(function () { return settingsApplyToTabs(message.tabId); })
+      .then(function () { sendResponse({ ok: true, host: host, enabled: !!message.enabled }); })
       .catch(function (err) { sendResponse({ ok: false, error: String(err) }); });
     return true;
   }

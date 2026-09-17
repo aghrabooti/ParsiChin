@@ -3,15 +3,13 @@
   "name": "__MSG_extName__",
   "short_name": "ParsiChin",
   "description": "__MSG_extDescription__",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "default_locale": "en",
-
   "icons": {
     "16": "assets/icons/icon16.png",
     "48": "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
   },
-
   "action": {
     "default_title": "__MSG_extName__",
     "default_popup": "src/popup/popup.html",
@@ -21,39 +19,31 @@
       "128": "assets/icons/icon128.png"
     }
   },
-
   "options_ui": {
     "page": "src/options/options.html",
     "open_in_tab": true
   },
-
   "background": {
     "service_worker": "src/background/service-worker.js"
   },
-
   "permissions": [
     "storage",
     "scripting",
     "tabs"
   ],
-
-  "optional_host_permissions": [
+  "host_permissions": [
     "*://*/*"
   ],
-
   "content_scripts": [
     {
       "matches": [
-        "https://chatgpt.com/*",
-        "https://chat.openai.com/*",
-        "https://claude.ai/*",
-        "https://gemini.google.com/*",
-        "https://www.perplexity.ai/*",
-        "https://chat.deepseek.com/*",
-        "https://copilot.microsoft.com/*",
-        "https://chat.mistral.ai/*",
-        "https://huggingface.co/chat/*",
-        "https://openai.com/*"
+        "*://*/*"
+      ],
+      "exclude_matches": [
+        "*://chrome.google.com/webstore/*",
+        "*://chromewebstore.google.com/*",
+        "*://addons.mozilla.org/*",
+        "*://microsoftedge.microsoft.com/addons/*"
       ],
       "js": [
         "src/shared/defaults.js",
@@ -69,7 +59,6 @@
       "all_frames": false
     }
   ],
-
   "web_accessible_resources": [
     {
       "resources": [

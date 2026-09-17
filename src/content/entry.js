@@ -34,8 +34,35 @@
 (function () {
   "use strict";
 
+  // Runs on every page now (the manifest declares wildcard access), so this
+  // guard matters: the same frame must never be processed twice — a static and a
+  // dynamic registration would otherwise both inject these files.
   if (window.__parsiChinBooted) return;
   window.__parsiChinBooted = true;
+
+  /* Documents where text direction is not ours to touch. */
+  const SKIP_HOSTS = [
+    "chrome.google.com",
+    "chromewebstore.google.com",
+    "addons.mozilla.org",
+    "microsoftedge.microsoft.com",
+    "accounts.google.com"
+  ];
+
+  function hostIsSkipped() {
+    let host = "";
+    try { host = location.hostname; } catch (e) { return true; }
+    return SKIP_HOSTS.some(function (h) { return host === h || host.endsWith("." + h); });
+  }
+
+  /* XML/PDF/plain-text documents have no layout to fix and no DOM to walk. */
+  function documentIsSupported() {
+    try {
+      if (document.contentType && document.contentType !== "text/html") return false;
+    } catch (e) { /* keep going */ }
+    if (!document.body) return false;
+    return !hostIsSkipped();
+  }
 
   const VERSION = (chrome.runtime && chrome.runtime.getManifest)
     ? chrome.runtime.getManifest().version : "unknown";
@@ -326,8 +353,10 @@
   function pageHasPersian() {
     const body = document.body;
     if (!body) return false;
-    const sample = body.innerText || body.textContent || "";
-    return bidi().hasPersian(sample.slice(0, 300000));
+    // textContent, not innerText: reading innerText forces a layout pass, which
+    // is exactly what we do not want on a heavy page we may not even touch.
+    const sample = (body.textContent || "").slice(0, 300000);
+    return bidi().hasPersian(sample);
   }
 
   /* ---------------- scan root ---------------- */
@@ -643,6 +672,13 @@
   window.ParsiChin.rescan = function () { walk(rootEl || document.body, currentSettings, false); };
 
   async function boot() {
+    // Unsupported documents (PDF/XML viewers, the extension stores, the sign-in
+    // page): stay loaded — the popup still answers — but never decorate.
+    if (!documentIsSupported()) {
+      window.ParsiChinSkipped = true;
+      return;
+    }
+
     const settings = await window.ParsiChinSettings.get();
     applyAll(settings);
 
