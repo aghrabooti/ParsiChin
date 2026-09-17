@@ -2,8 +2,8 @@ ParsiChin v0.2.0 — commit log
 ==========================
 
 Base commit : 9f5fa71  test(smoke): enhance smoke tests for DeepSeek layout and Persian text handling
-Head        : 06b362a
-Commits     : 22
+Head        : de54db9
+Commits     : 25
 Files       : 43 changed
 
 Everything is pushed to the branch arena/01a0b0f4-parsichin (PR #1) and is also
@@ -21,6 +21,9 @@ Or group the changes into seven short commits under your own name:
 --------------------------------------------------------------------------
 Applied commits (newest first)
 --------------------------------------------------------------------------
+  de54db9  2026-09-17 21:10  feat(demo): link extension build
+  147b62e  2026-09-17 21:09  feat(server): offer extension build
+  100ffb7  2026-09-17 21:09  docs: refresh commit log
   06b362a  2026-09-17 21:06  fix: optional host permission
   5fe4783  2026-09-17 20:59  chore: commit script keeps your identity
   efe2617  2026-09-17 20:53  docs: list commit script
