@@ -1,14 +1,17 @@
 {
   "name": "parsichin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Chrome extension that makes mixed Persian/English text readable on AI chat web pages",
   "scripts": {
     "check": "bash scripts/check.sh",
     "build": "bash scripts/build.sh",
-    "test": "node tests/smoke.test.js && node tests/ui-sanity.test.js"
+    "test": "node tests/smoke.test.js && node tests/ui-sanity.test.js",
+    "audit:rtl": "node tools/rtl-audit.js",
+    "demo": "node tools/serve.js"
   },
   "devDependencies": {
-    "jsdom": "^24.1.3"
+    "jsdom": "^24.1.3",
+    "playwright-core": "^1.63.0"
   }
 }

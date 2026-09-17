@@ -10,3 +10,7 @@ Thumbs.db
 *.log
 .idea/
 .vscode/
+
+# Local download bundles (project zip + change patch) built for review
+ParsiChin-*.zip
+ParsiChin-*.patch
