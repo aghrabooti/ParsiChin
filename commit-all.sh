@@ -19,7 +19,7 @@ git config user.name  "Your Name"
 git config user.email "you@example.com"
 
 # --------------------------------------------- 1) optional host permission fix
-git add src/options/options.js src/background/service-worker.js src/shared/defaults.js manifest.json
+git add src/options/options.js src/options/options.html src/background/service-worker.js src/shared/defaults.js manifest.json
 git commit -m "fix: optional host permission"
 
 # --------------------------------------------- 2) direction engine + CSS
