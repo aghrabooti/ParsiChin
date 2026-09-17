@@ -13,6 +13,16 @@
 "use strict";
 
 const STORAGE_KEY = "parsiChinSettings";
+
+/**
+ * Host patterns for the optional permission. MUST equal
+ * `optional_host_permissions` in manifest.json: chrome.permissions.contains()
+ * and chrome.scripting.registerContentScripts() both reject patterns the
+ * manifest does not declare, and <all_urls> is not the same pattern as the
+ * manifest's wildcard host pattern (that mismatch made "all sites" mode
+ * silently do nothing).
+ */
+const ALL_ORIGINS = ["*://*/*"];
 const DYNAMIC_SCRIPT_ID = "parsi-chin-dynamic";
 
 const DEFAULT_SETTINGS = {
@@ -69,8 +79,8 @@ async function refreshBadge() {
 
 /**
  * Dynamic scripts for custom sites / "all sites" mode.
- * Requires the optional "<all_urls>" permission, requested from the options
- * page on a user gesture. Unregistering never throws.
+ * Requires the optional host permission (ALL_ORIGINS), requested from the
+ * options page on a user gesture. Unregistering never throws.
  */
 async function registerDynamicScripts(settings) {
   const scriptFiles = [
@@ -93,14 +103,14 @@ async function registerDynamicScripts(settings) {
     return;
   }
 
-  const hasAllSitesPermission = await chrome.permissions.contains({ origins: ["<all_urls>"] });
+  const hasAllSitesPermission = await chrome.permissions.contains({ origins: ALL_ORIGINS });
   if (settings.allSites && !hasAllSitesPermission) {
     await unregister();
     return;
   }
 
   const matches = settings.allSites
-    ? ["<all_urls>"]
+    ? ALL_ORIGINS
     : customMatches;
 
   try {
@@ -125,6 +135,13 @@ chrome.runtime.onInstalled.addListener(async function () {
 });
 
 chrome.runtime.onStartup.addListener(refreshBadge);
+
+/* A permission can also be granted from chrome://extensions — pick that up. */
+if (chrome.permissions && chrome.permissions.onAdded) {
+  chrome.permissions.onAdded.addListener(function () {
+    getSettings().then(registerDynamicScripts).catch(function () {});
+  });
+}
 
 chrome.storage.onChanged.addListener(function (changes, areaName) {
   if (areaName !== "local") return;

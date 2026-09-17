@@ -44,7 +44,7 @@
     /** Keep <code>/<pre> blocks strictly LTR and monospace. */
     keepCodeLtr: true,
 
-    /** Inject on every website (requires the optional <all_urls> permission). */
+    /** Inject on every website (requires the optional wildcard host permission). */
     allSites: false,
 
     /** Extra sites injected dynamically, e.g. ["example.com"]. */
