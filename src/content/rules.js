@@ -135,9 +135,21 @@
     }
   ];
 
+  /**
+   * Does a hostname belong to a rule / a user-added site?
+   *
+   * Accepts either a list of sites (as in the rules above) or a single site
+   * string — callers that check a per-site override pass one key. Passing a
+   * string used to throw "sites.some is not a function" and aborted the scan,
+   * which made a site switched off in the options page break the whole page.
+   */
   function hostMatchesRule(hostname, sites) {
-    return sites.some(function (site) {
-      return hostname === site || hostname.endsWith("." + site);
+    if (!hostname || !sites) return false;
+    const list = Array.isArray(sites) ? sites : [sites];
+    return list.some(function (site) {
+      if (!site) return false;
+      const clean = String(site).trim().toLowerCase().replace(/^\*?\.?/, "").replace(/^www\./, "");
+      return hostname === clean || hostname.endsWith("." + clean);
     });
   }
 

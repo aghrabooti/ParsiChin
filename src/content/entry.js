@@ -290,13 +290,44 @@
   }
 
   /** Walk a subtree and decorate every eligible block. */
+  /**
+   * Budget for a full page walk.
+   *
+   * On the ten known chat sites the root is narrow, so these limits are never
+   * reached. They exist for "all sites" mode, where the root can be the whole
+   * <body> of a 20 000-element news page: decorating everything there would
+   * cost more than it is worth, so the walk stops and says so in the report.
+   */
+  const MAX_VISITS = 20000;
+  const MAX_BLOCKS = 3000;
+  let visitBudget = MAX_VISITS;
+
   function walk(node, settings, insideRtl) {
+    if (visitBudget <= 0) return;
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     if (isProtected(node)) return;
+    visitBudget--;
     const isRtl = applyDecoration(node, settings, insideRtl);
+    if (decorated.size >= MAX_BLOCKS) return;
     const children = node.children;
     const childInsideRtl = insideRtl || isRtl;
-    for (let i = 0; i < children.length; i++) walk(children[i], settings, childInsideRtl);
+    for (let i = 0; i < children.length; i++) {
+      if (visitBudget <= 0) break;
+      walk(children[i], settings, childInsideRtl);
+    }
+  }
+
+  /**
+   * Cheap check before a generic (non-rule) scan: does the page contain Persian
+   * letters at all? On a mostly-Latin site this avoids walking thousands of
+   * elements for nothing. The observer stays attached, so Persian content that
+   * arrives later is still decorated.
+   */
+  function pageHasPersian() {
+    const body = document.body;
+    if (!body) return false;
+    const sample = body.innerText || body.textContent || "";
+    return bidi().hasPersian(sample.slice(0, 300000));
   }
 
   /* ---------------- scan root ---------------- */
@@ -309,11 +340,17 @@
     });
   }
 
-  /** True when this page is in scope (known site + not blocked, or allSites). */
+  /**
+   * True when this page is in scope: a known site, or any host when the user
+   * turned on "all sites" — but never when the user switched this host off.
+   * The override wins even for hosts that have no built-in rule (that is how
+   * you exclude one site while "all sites" is on).
+   */
   function pageInScope(settings) {
+    if (hostBlocked(settings)) return false;
     const rule = rules().ruleForHost(location.hostname);
     if (!rule) return !!settings.allSites;
-    return !hostBlocked(settings);
+    return true;
   }
 
   /**
@@ -332,8 +369,8 @@
    * font change — "the font changes but the direction never does".
    */
   function resolveRoot(settings) {
+    if (hostBlocked(settings)) return null;
     const rule = rules().ruleForHost(location.hostname);
-    if (rule && hostBlocked(settings)) return null;
 
     const pickNarrowest = function (selector) {
       let narrow = null;
@@ -352,6 +389,7 @@
 
     let root = null;
     if (rule) root = pickNarrowest(rule.root);
+    if (!root && !rule && !pageHasPersian()) return null;   // nothing Persian → nothing to do
     if (!root && settings.allSites) {
       root = document.querySelector("main, article, [role='main']");
       if (root && root.textContent.length > 30000) root = null; // too big → skip heuristics
@@ -378,6 +416,7 @@
 
     applyBaseVariables(settings);
     rootEl = resolveRoot(settings);
+    visitBudget = MAX_VISITS;
     if (rootEl) walk(rootEl, settings, false);
     logStats();
 
@@ -557,7 +596,11 @@
 
   function onMutations(mutations) {
     if (!currentSettings || !currentSettings.enabled) return;
-    if (!rootEl) resolveRootLater();
+    if (!rootEl) {
+      // The root may only appear later (SPA). Re-check occasionally, not on
+      // every mutation batch, so a busy page cannot trigger repeated scans.
+      resolveRootLater();
+    }
     if (!rootEl) return; // nothing to scan yet; the observer stays armed
 
     const pendingText = [];
