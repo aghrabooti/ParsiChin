@@ -81,7 +81,7 @@
      full URL is what people need if the direct click is blocked). */
   (function showAbsoluteUrls() {
     const origin = location.origin;
-    ["#dl-zip-url", "#dl-patch-url", "#dl-commits-url", "#dl-commands-url"].forEach((sel) => {
+    ["#dl-build-url", "#dl-zip-url", "#dl-patch-url", "#dl-commits-url", "#dl-commands-url"].forEach((sel) => {
       const el = document.querySelector(sel);
       if (el) el.textContent = origin + el.textContent;
     });
