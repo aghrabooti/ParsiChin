@@ -4,7 +4,7 @@ Everything you have to paste already exists in this repository:
 
 | what | where |
 | --- | --- |
-| upload package | `bash scripts/build.sh` → `dist/parsi-chin-v0.2.0.zip` (only `manifest.json`, `_locales/`, `assets/icons/`, `src/`, `styles/`) |
+| upload package | `bash scripts/build.sh` → `dist/parsi-chin-v0.2.1.zip` (only `manifest.json`, `_locales/`, `assets/icons/`, `src/`, `styles/`) |
 | store icon 128×128 | `assets/icons/icon128.png` |
 | screenshots 1280×800 | `docs/store/store-1-chat-rtl.png`, `store-2-lab.png`, `store-3-overview.png` |
 | small promo tile 440×280 | `docs/store/promo-440x280.png` |
@@ -25,7 +25,7 @@ Everything you have to paste already exists in this repository:
 ## 1 · Build the upload package
 
 ```bash
-bash scripts/build.sh          # → dist/parsi-chin-v0.2.0.zip
+bash scripts/build.sh          # → dist/parsi-chin-v0.2.1.zip
 bash scripts/store-check.sh    # verifies icons, screenshots, manifest and listing limits
 
 # need to re-shoot the store graphics after a UI change?
@@ -33,12 +33,12 @@ npm run demo &                 # start the live server
 node tools/store-shots.js      # → docs/store/*.png at the exact store sizes
 ```
 
-Do **not** upload the project zip (`ParsiChin-v0.2.0.zip`) — the store package must contain the
+Do **not** upload the project zip (`ParsiChin-v0.2.1.zip`) — the store package must contain the
 extension only. `scripts/build.sh` already produces the right file.
 
 ## 2 · Create the item and upload
 
-1. Dashboard → **New item** → drop `dist/parsi-chin-v0.2.0.zip` → **Upload**.
+1. Dashboard → **New item** → drop `dist/parsi-chin-v0.2.1.zip` → **Upload**.
 2. If the upload reports an error, it lists the exact field that fails (version, icon, manifest).
 
 ## 3 · Store listing
@@ -108,9 +108,13 @@ extension ID never change, so existing users update automatically.
 
 ## 8 · What reviewers look at for this extension
 
-* **Single purpose** — "adjust Persian text direction on chat pages". Keep the listing language that
-  narrow; do not describe it as a general translator or chat client. The "enable on this site" button
-  is part of that single purpose: it applies the same adjustment to a page the user explicitly picks.
+* **Single purpose** — "make Persian text readable by fixing text direction on web pages". Keep the
+  listing language narrow; do not describe it as a general translator or chat client.
+* **Broad host access is now required, and must be justified.** The packument declares `*://*/*`
+  because "fix text on any site" is the feature; the justification already in
+  `docs/store/listing.json` explains it, the extension stores are excluded in the manifest, and no
+  page content ever leaves the browser (no `fetch`, no XHR). Reviewers may still ask a follow-up —
+  answer promptly, pointing at `PRIVACY.md`.
 * **No remote code** — the package is self-contained; the bundled Vazirmatn fonts are in `styles/fonts/`.
 * **Justified permissions** — `storage`, `scripting`, `tabs` and the *optional* `*://*/*`; the built-in
   content script matches only the ten listed AI chat hosts.

@@ -10,7 +10,7 @@ Suggested phases, each one a set of small, independent commits. Run `npm test` a
 * `feat: popup with site status and full options page with live preview`
 * `chore: build/check scripts, smoke tests and docs`
 
-## Phase 1 — RTL correctness (shipped, v0.2.0)
+## Phase 1 — RTL correctness (shipped, v0.2.1)
 
 * [x] audit the real rendering in a browser and document the root causes (`docs/rtl-audit.md`)
 * [x] replace `dir="auto"` with content-based direction decided once per block

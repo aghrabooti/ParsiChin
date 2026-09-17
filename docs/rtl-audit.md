@@ -9,8 +9,8 @@ in v0.2.0, and how to verify it yourself in a real browser.
 
 | build | probes | failing |
 | --- | --- | --- |
-| v0.1.0 (`HEAD`) | 136 | **48** |
-| v0.2.0 (fixed) | 136 | **0** |
+| v0.1.0 (`HEAD`) | 174 | **61** |
+| v0.2.x (fixed) | 174 | **0** |
 
 (95 probes were measured before the `missing-root` scenario was added: 22 failing then, 0 after.)
 
@@ -51,7 +51,9 @@ scenarios:
 | `site-css-ltr` | site hard-codes `direction: ltr` on message bodies |
 | `site-css-ltr-important` | site hard-codes `direction: ltr !important` |
 | `missing-root` | the rule's container does not exist (no `<main>`, no `#app`) — the shape of DeepSeek's current build |
-| `unknown-host-all-sites` | a host with no rule at all (`example.com`, no container) with "all sites" on — 13 of 19 probes failed before this work, 0 now |
+| `unknown-host-default` | a host with no rule at all with **nothing stored** — i.e. the shipped default, which must already fix the page (13 of 19 probes failed with the v0.1.0 sources, 0 now) |
+| `unknown-host-all-sites` | the same, with "all sites" explicit |
+| `unknown-host-limited` | the same page with "all sites" off: nothing may be decorated |
 | `unknown-host-english` | the same kind of host with an English-only page: nothing may be decorated |
 | `native-rtl-page` | a page that is already RTL |
 
@@ -200,7 +202,7 @@ For the extension itself:
 ```bash
 npm test                 # jsdom unit + regression tests
 npm run check            # JSON / JS syntax / required files
-npm run build            # dist/parsi-chin-v0.2.0.zip
+npm run build            # dist/parsi-chin-v0.2.1.zip
 ```
 
 ---

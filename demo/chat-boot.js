@@ -20,6 +20,9 @@
   const fontFamily = params.get("font") === "system" ? "system" : "vazirmatn";
   const site = params.get("site") === "deepseek" ? "deepseek" : "chatgpt";
   const noRoot = params.get("noroot") === "1";
+  // "coverage=listed" emulates the options page switch that limits the extension
+  // to the built-in AI chat sites (all-sites mode off).
+  const coverage = params.get("coverage") === "listed" ? "listed" : "all";
 
   /**
    * Simulate a redesigned chat UI: same look, but <main> and #app are gone, so
@@ -37,7 +40,7 @@
   }
 
   document.getElementById("meta").textContent =
-    `${engine === "before" ? "v0.1.0 (before fix)" : "v0.2.0 (after fix)"} · ` +
+    `${engine === "before" ? "v0.1.0 (before fix)" : "v0.2.1 (after fix)"} · ` +
     `extension ${extOn ? "ON" : "OFF"} · mode=${applyMode} · font=${fontFamily} · site rule=${site}`;
 
   // NOTE: the `disabled` attribute on <style> is unreliable; use `media`.
@@ -73,7 +76,9 @@
     fontWeight: 400,
     punctuationNormalization: false,
     keepCodeLtr: true,
-    allSites: false,
+    // Default in v0.2.1: every site is covered. "coverage=listed" switches it
+    // back to the built-in list so the lab can show both behaviours.
+    allSites: coverage !== "listed",
     customSites: [],
     siteOverrides: {}
   };
@@ -236,7 +241,7 @@
       ? window.ParsiChin.report().stats
       : null;
     window.parent.postMessage(
-      { type: "parsichin-lab", engine, extOn, applyMode, site, noRoot, rows, engineStats },
+      { type: "parsichin-lab", engine, extOn, applyMode, site, noRoot, coverage, rows, engineStats },
       "*"
     );
   }

@@ -15,7 +15,8 @@
     "• English stays left-to-right — even inside a Persian answer, and even when a site forces direction: ltr !important on its own containers.",
     "• List bullets, table cells and multi-line paragraphs follow their own text instead of the page.",
     "• Optional Persian-friendly font (Vazirmatn, bundled — no downloads at runtime) with adjustable size.",
-    "• Per-site control: the ten supported AI chat sites work out of the box, and any other page can be enabled with one click from the popup — either just that site or every site.",
+    "• Works on every website from the moment you install it — no per-site setup. The ten AI chat sites are tuned with site-specific rules; everywhere else the direction is decided from the text itself.",
+    "• Full control: switch \"all sites\" off to limit the extension to the built-in list, exclude any single site, and see in the popup exactly what is happening on the page you are looking at.",
     "• “All sites” mode requests the additional permission only when you switch it on.",
     "",
     "HOW IT WORKS",
@@ -35,7 +36,7 @@
     "storage": "Stores the user's settings (font, font size, apply mode, per-site enable list) in the browser's local extension storage. Nothing is transmitted anywhere.",
     "scripting": "Registers the content script on sites the user enables beyond the built-in list (custom sites and “all sites” mode). The script only sets direction/alignment/font on text blocks in the page; it does not collect or send page content.",
     "tabs": "Reads the URL of the active tab so the popup can tell whether the extension is active on the current site and show how many text blocks were adjusted on that page.",
-    "host_permissions (optional *://*/*)": "Requested only when the user turns on “all sites” or adds a custom site, because the extension can only adjust text on pages it is allowed to run on. It is optional: without it the extension runs only on the ten built-in AI chat sites listed in the manifest.",
+    "host_permissions (*://*/*)": "Required for the extension's core purpose: fixing Persian text direction on any page the user reads, not only on the ten AI chat sites that are built in as examples. The script only reads the text it measures in the page to decide direction/alignment and applies a font; page content never leaves the browser (there is no fetch or XHR anywhere in the package). The Chrome Web Store, the Firefox add-on site and the Edge add-on site are excluded in the manifest, the code refuses to run on non-HTML documents, and users can restrict access from chrome://extensions or in the extension's own options page.",
     "remote_code": "None. All JavaScript, CSS and fonts are contained in the uploaded package; the extension never loads or executes remote code."
   },
   "dataUsage": {
@@ -53,6 +54,6 @@
     ],
     "small_promo_tile": "docs/store/promo-440x280.png",
     "marquee": "docs/store/marquee-1400x560.png",
-    "package": "dist/parsi-chin-v0.2.0.zip"
+    "package": "dist/parsi-chin-v0.2.1.zip"
   }
 }

@@ -5,7 +5,7 @@
 Works on Chrome, Edge, Brave, Vivaldi, Opera and any other Chromium browser.
 
 1. Download the build from the live server:
-   **`/dist/parsi-chin-v0.2.0.zip`** (or from GitHub Releases).
+   **`/dist/parsi-chin-v0.2.1.zip`** (or from GitHub Releases).
 2. Unzip it anywhere permanent — for example `Documents/ParsiChin`. Do **not** delete the folder
    afterwards: the browser loads the extension from it on every start.
 3. Open `chrome://extensions` (Edge: `edge://extensions`).
@@ -15,9 +15,13 @@ Works on Chrome, Edge, Brave, Vivaldi, Opera and any other Chromium browser.
    `Ctrl/Cmd+Shift+R`. Click the toolbar icon to check: the popup reports how many text blocks were
    adjusted on that page.
 
-**Want it on a site that is not in the list?** Open that site and click the toolbar icon:
-**Enable on this site** fixes the current page instantly (no reload, Chrome asks only for that one
-origin). **Enable on all sites** turns the mode on everywhere. Both can be undone in the options page.
+**It already works everywhere.** Chrome shows one permission line when you install
+("read and change your data on all websites") because that is what "fix the text on any site" means.
+No further setup: open any page with Persian text and it is fixed.
+
+Want it to stay out of some places, or only run on the AI chat sites? Open the options page:
+switch **"all sites"** off to limit it to the built-in list, or untick a single site. The popup shows
+what applies to the page you are looking at and can switch one host on or off immediately.
 
 ### Updating
 
@@ -33,12 +37,13 @@ origin). **Enable on all sites** turns the mode on everywhere. Both can be undon
 | install | 6 manual steps | one click from the listing |
 | updates | manual (re-download, reload) | automatic |
 | warning | Chrome shows "Disable developer mode extensions" after a restart, and disables unpacked extensions unless you click **Keep** | none |
+| permission prompt | same for both: “read and change your data on all websites” (that is what working on every site requires) |
 | reach | people you send the file to | search inside the store |
 
 ## Option B · Free: Microsoft Edge Add-ons
 
 The Edge Add-ons store is **free** and accepts the same package
-(`dist/parsi-chin-v0.2.0.zip`, produced by `bash scripts/build.sh`). One-click installs and automatic
+(`dist/parsi-chin-v0.2.1.zip`, produced by `bash scripts/build.sh`). One-click installs and automatic
 updates for Edge users; Chrome users still need option A. Dashboard:
 <https://partner.microsoft.com/dashboard/microsoftedge>.
 

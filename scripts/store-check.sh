@@ -43,12 +43,33 @@ const required = (m.permissions || []);
 for (const p of required) {
   if (/urls|<all_urls>|http/i.test(p)) problems.push("required permission looks like a host pattern: " + p);
 }
+if (JSON.stringify(m).includes("<all_urls>"))
+  problems.push("the manifest uses the <all_urls> spelling; declare the wildcard host pattern instead");
 if (!(m.optional_host_permissions || []).length && !(m.host_permissions || []).length)
   notes.push("no host permissions at all — the built-in sites in content_scripts still work");
 
 const matches = (m.content_scripts || []).flatMap((c) => c.matches || []);
-if (matches.some((x) => /<all_urls>|\*:\/\/\*\/\*/.test(x)))
-  problems.push("content_scripts matches everything — reviewers treat that as broad access");
+const broadMatches = matches.some((x) => /<all_urls>|\*:\/\/\*\/\*/.test(x));
+const hostPatterns = [].concat(m.host_permissions || [], m.optional_host_permissions || []);
+const broadDeclared = hostPatterns.some((x) => /\*:\/\/\*\/\*|<all_urls>/.test(x));
+if (broadMatches) {
+  // Deliberate: "fix the text on any site" is the feature. Reviewers will ask why,
+  // so the justification in docs/store/listing.json must exist and be specific.
+  const listing = JSON.parse(fs.readFileSync("docs/store/listing.json", "utf8"));
+  const justifications = listing.permissionJustifications || {};
+  const justification = Object.keys(justifications)
+    .map((k) => k + " " + justifications[k]).join(" ");
+  if (!/\*:\/\/\*\/\*/.test(justification) || justification.length < 200) {
+    problems.push("content_scripts matches everything: docs/store/listing.json needs a detailed host-permission justification");
+  } else if (!broadDeclared) {
+    problems.push("the content script matches everything but no wildcard is declared in host_permissions");
+  } else {
+    notes.push("broad host access is declared on purpose — the justification in docs/store/listing.json covers it");
+  }
+}
+const excludes = (m.content_scripts || []).flatMap((c) => c.exclude_matches || []);
+if (broadMatches && !excludes.some((x) => /chromewebstore\.google\.com/.test(x)))
+  problems.push("exclude the extension stores from content_scripts (exclude_matches)");
 
 const locales = fs.existsSync("_locales/en/messages.json");
 if (!locales) problems.push("_locales/en/messages.json missing (default locale)");
@@ -135,8 +156,16 @@ const description = Array.isArray(l.description) ? l.description.join("\n") : St
 line("description", description);
 if (!l.singlePurpose) { console.log("  \u001b[31m✘\u001b[0m singlePurpose missing"); fail = 1; }
 else console.log("  \u001b[32m✔\u001b[0m singlePurpose present");
-const need = ["storage", "scripting", "tabs", "host_permissions (optional *://*/*)", "remote_code"];
-const missing = need.filter((k) => !l.permissionJustifications || !l.permissionJustifications[k]);
+const justifications = l.permissionJustifications || {};
+const keys = Object.keys(justifications).join(" ").toLowerCase();
+const need = [
+  ["storage", /storage/],
+  ["scripting", /scripting/],
+  ["tabs", /tabs/],
+  ["host permissions", /host_permissions|host access|host permission/],
+  ["remote code", /remote_code|remote code/]
+].filter(([label, re]) => !re.test(keys));
+const missing = need.map(([label]) => label);
 if (missing.length) { console.log("  \u001b[31m✘\u001b[0m permission justification missing for: " + missing.join(", ")); fail = 1; }
 else console.log("  \u001b[32m✔\u001b[0m permission justifications for storage, scripting, tabs, host access and remote code");
 if (!l.dataUsage || l.dataUsage.collects_user_data !== false) {

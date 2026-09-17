@@ -20,21 +20,21 @@ const THEME_FILE = path.join(ROOT, "demo", "site-theme.css");
 /** Bundles offered for download. One list, used by the pages and the server. */
 const BUNDLES = [
   {
-    file: "dist/parsi-chin-v0.2.0.zip",
+    file: "dist/parsi-chin-v0.2.1.zip",
     label: "Extension build",
     tag: "install this",
     note: "The packaged extension itself. Unzip it, then chrome://extensions → Developer mode → Load unpacked.",
     kind: "build"
   },
   {
-    file: "ParsiChin-v0.2.0.zip",
+    file: "ParsiChin-v0.2.1.zip",
     label: "Project zip",
     tag: "everything",
     note: "Every project file: extension source, bundled fonts, docs, tests, the RTL lab and the audit tool.",
     kind: "project"
   },
   {
-    file: "ParsiChin-v0.2.0.patch",
+    file: "ParsiChin-v0.2.1.patch",
     label: "Changes patch",
     tag: "git am",
     note: "All commits as one git patch. Replays the complete fix onto the base commit.",
@@ -141,7 +141,7 @@ const NAV = [
   { href: "/", label: "Overview", key: "home" },
   { href: "/demo/", label: "RTL lab", key: "lab" },
   { href: "/download/", label: "Downloads", key: "download" },
-  { href: "/ParsiChin-v0.2.0.zip", label: "Project zip", key: "zip" },
+  { href: "/ParsiChin-v0.2.1.zip", label: "Project zip", key: "zip" },
   { href: "https://github.com/aghrabooti/ParsiChin", label: "Repository", key: "repo" }
 ];
 
@@ -202,7 +202,7 @@ function layout(opts) {
     "</div></nav>\n" +
     '<main class="wrap">\n' + opts.body + "\n</main>\n" +
     '<footer class="foot"><div class="wrap foot-inner">' +
-      "<span>ParsiChin v0.2.0 · Chrome MV3 · MIT</span>" +
+      "<span>ParsiChin v0.2.1 · Chrome MV3 · MIT</span>" +
       '<span class="mono">' + esc(git.branch || "?") + " @ " + esc(git.head || "?") + "</span>" +
       "<span>" + esc(git.commits || "0") + " commits since the base</span>" +
       '<span class="mono">' + esc(git.date || "") + "</span>" +
@@ -278,7 +278,7 @@ function landing(ctx) {
 
   const body =
     '<section class="hero">\n' +
-    '<span class="eyebrow">Chrome MV3 extension · v0.2.0 · working tree served live</span>\n' +
+    '<span class="eyebrow">Chrome MV3 extension · v0.2.1 · every site, out of the box</span>\n' +
     "<h1>Persian text, right-aligned on every AI chat</h1>\n" +
     '<p class="lede">ParsiChin reads the characters of each text block and sets the direction that ' +
     "belongs there — Persian right-to-left, English left-to-right — without breaking either. " +
@@ -286,14 +286,14 @@ function landing(ctx) {
     "in a mock chat, and every deliverable is downloadable below.</p>\n" +
     '<div class="cta-row">' +
       '<a class="btn primary" href="/demo/">Open the RTL lab</a>' +
-      '<a class="btn" href="/dist/parsi-chin-v0.2.0.zip" download>Download extension build</a>' +
+      '<a class="btn" href="/dist/parsi-chin-v0.2.1.zip" download>Download extension build</a>' +
       '<a class="btn" href="/download/">All files</a>' +
     "</div>\n" +
     '<div class="stats">' +
       '<div class="stat good"><b>0</b><span>failing probes after the fix</span></div>' +
-      '<div class="stat bad"><b>48 → 0</b><span>before → after (audit)</span></div>' +
-      '<div class="stat accent"><b>136</b><span>audit probes, 8 scenarios</span></div>' +
-      '<div class="stat"><b>v0.2.0</b><span>extension build in <code>/dist</code></span></div>' +
+      '<div class="stat bad"><b>61 → 0</b><span>before → after (audit)</span></div>' +
+      '<div class="stat accent"><b>174</b><span>audit probes, 10 scenarios</span></div>' +
+      '<div class="stat"><b>v0.2.1</b><span>extension build in <code>/dist</code></span></div>' +
     "</div>\n" +
     "</section>\n" +
 
@@ -305,22 +305,24 @@ function landing(ctx) {
     "</section>\n" +
 
     '<section class="sec" id="anywhere">\n' +
-    '<div class="sec-head"><h2>Works on any site</h2>' +
-    '<span class="sec-sub">Ten AI chat sites are built in. Everything else is one click away.</span></div>\n' +
+    '<div class="sec-head"><h2>Works on every site, out of the box</h2>' +
+    '<span class="sec-sub">v0.2.1 runs on every http(s) page. No per-site setup, no first-run click.</span></div>\n' +
     '<div class="grid three">\n' +
-      '<div class="card"><h3>1 · Open the page you want</h3><p>Any page with Persian text — a forum, a ' +
-        "docs site, an internal tool. The popup notices that the page is not in the built-in list and " +
-        "offers to enable it.</p></div>\n" +
-      '<div class="card"><h3>2 · Click “Enable on this site”</h3><p>Chrome asks for that single origin ' +
-        "(<code>https://that-site/*</code>) and the text is fixed <strong>immediately</strong> — no " +
-        "reload. “Enable on all sites” does the same for every page.</p></div>\n" +
-      '<div class="card"><h3>3 · Switch anything back off</h3><p>The options page lists every site you ' +
-        "enabled and takes a single one back out, even while “all sites” is on.</p></div>\n" +
+      '<div class="card"><h3>Installed, then done</h3><p>The manifest asks for access to all sites, so ' +
+        "the script is already running on the next page you open. Chrome shows that one permission " +
+        "line at install time — that is what “fix the text anywhere” means.</p></div>\n" +
+      '<div class="card"><h3>Cheap where it does nothing</h3><p>A page without a single Persian ' +
+        "letter is skipped before any walking (checked with <code>textContent</code>, no layout pass), " +
+        "and every scan is capped at 20 000 elements / 3 000 blocks.</p></div>\n" +
+      '<div class="card"><h3>You stay in control</h3><p>Switch “all sites” off to limit it to the ten ' +
+        "built-in AI chat sites, untick any single site in the options page, or use the popup to " +
+        "switch the current host on or off instantly.</p></div>\n" +
     "</div>\n" +
     '<p class="note" style="margin-top:12px">Measured in a real browser: on a host the extension has ' +
-    "never seen, with “all sites” on and no known container, <strong>19 of 19</strong> probes pass " +
-    "(13 failed with the pre-fix code). An English-only page on such a host is left completely " +
-    "untouched.</p>\n" +
+    "never seen, with nothing stored and no known container, <strong>19 of 19</strong> probes pass " +
+    "(13 failed with the pre-fix code); with “all sites” switched off that same page is left " +
+    "completely untouched, as is an English-only page. The extension stores are excluded in the " +
+    "manifest and the script refuses non-HTML documents.</p>\n" +
     "</section>\n" +
 
     '<section class="sec" id="files">\n' +
@@ -337,9 +339,11 @@ function landing(ctx) {
     '<div class="grid two">\n' +
       '<div class="card"><h3>1 · Load the extension</h3>' +
         '<ol class="steps">' +
-        "<li><strong>Download and unzip</strong> <code>dist/parsi-chin-v0.2.0.zip</code>.</li>" +
+        "<li><strong>Download and unzip</strong> <code>dist/parsi-chin-v0.2.1.zip</code>.</li>" +
         "<li>Open <code>chrome://extensions</code> and switch on <strong>Developer mode</strong>.</li>" +
         "<li><strong>Load unpacked</strong> → pick the unzipped folder.</li>" +
+        "<li>Chrome asks for <em>“read and change your data on all websites”</em> — that is the feature: " +
+        "Persian text is fixed on any page. You can restrict it later in the options page.</li>" +
         "<li>After every rebuild, click the <strong>⟳ reload</strong> button on the extension card and then " +
         "hard-reload the site (<code>Ctrl/Cmd+Shift+R</code>) — content scripts are not swapped into open tabs.</li>" +
         "</ol></div>\n" +
@@ -355,7 +359,7 @@ function landing(ctx) {
       cmd("Run the test suite + browser audit (from the project folder)",
         "npm install\nnpm test                 # smoke + UI sanity + permissions\nPC_CHROMIUM=/path/to/chromium npm run audit:rtl -- --strict") +
       cmd("Apply the changes to your own clone",
-        "git checkout -b rtl-fix origin/main\ngit checkout bugfix-branch -- .   # or: git am ParsiChin-v0.2.0.patch\nbash commit-all.sh               # commits everything, short messages\nbash scripts/check.sh") +
+        "git checkout -b rtl-fix origin/main\ngit checkout bugfix-branch -- .   # or: git am ParsiChin-v0.2.1.patch\nbash commit-all.sh               # commits everything, short messages\nbash scripts/check.sh") +
     "</div>\n" +
     "</section>\n" +
 
@@ -365,7 +369,7 @@ function landing(ctx) {
     "same code the store would get.</span></div>\n" +
     '<div class="grid two">\n' +
       '<div class="card"><ol class="steps">' +
-        "<li>Download <code>dist/parsi-chin-v0.2.0.zip</code> and <strong>unzip</strong> it to a folder you keep " +
+        "<li>Download <code>dist/parsi-chin-v0.2.1.zip</code> and <strong>unzip</strong> it to a folder you keep " +
         "(the browser loads the extension from that folder, so do not delete it).</li>" +
         "<li>Open <code>chrome://extensions</code> and switch on <strong>Developer mode</strong>.</li>" +
         "<li><strong>Load unpacked</strong> → choose the unzipped folder (the one with <code>manifest.json</code>).</li>" +
@@ -468,8 +472,8 @@ function downloads(ctx) {
     '<p class="lede">Sizes and checksums are read from the files on disk when the page loads. ' +
     "Nothing here is a placeholder — if a bundle were missing it would say so.</p>\n" +
     '<div class="cta-row">' +
-      '<a class="btn primary" href="/dist/parsi-chin-v0.2.0.zip" download>Extension build</a>' +
-      '<a class="btn" href="/ParsiChin-v0.2.0.zip" download>Project zip</a>' +
+      '<a class="btn primary" href="/dist/parsi-chin-v0.2.1.zip" download>Extension build</a>' +
+      '<a class="btn" href="/ParsiChin-v0.2.1.zip" download>Project zip</a>' +
       '<a class="btn" href="/demo/">Back to the lab</a>' +
     "</div>\n" +
     "</section>\n" +
@@ -494,7 +498,7 @@ function downloads(ctx) {
     '<a href="/INSTALL.md">INSTALL.md</a>.</span></div>\n' +
     '<div class="grid two">\n' +
       '<div class="card"><ol class="steps">' +
-        "<li>Download <code>dist/parsi-chin-v0.2.0.zip</code> and unzip it.</li>" +
+        "<li>Download <code>dist/parsi-chin-v0.2.1.zip</code> and unzip it.</li>" +
         "<li><code>chrome://extensions</code> → <strong>Developer mode</strong> → <strong>Load unpacked</strong>.</li>" +
         "<li>Pick the unzipped folder (the one containing <code>manifest.json</code>).</li>" +
         "<li>Open a chat site, type Persian, and check the popup: it reports the decorated block count.</li>" +
@@ -515,7 +519,7 @@ function notFound(pathname, ctx) {
     "<h1>No such file on this server</h1>\n" +
     '<p class="lede">Nothing is served at <code>' + esc(pathname) + "</code>. " +
     "The project root is the working tree, so paths look like <code>/demo/index.html</code> or " +
-    "<code>/dist/parsi-chin-v0.2.0.zip</code>.</p>\n" +
+    "<code>/dist/parsi-chin-v0.2.1.zip</code>.</p>\n" +
     '<div class="cta-row"><a class="btn primary" href="/">Overview</a>' +
     '<a class="btn" href="/demo/">RTL lab</a><a class="btn" href="/download/">Downloads</a></div>\n' +
     "</section>\n";

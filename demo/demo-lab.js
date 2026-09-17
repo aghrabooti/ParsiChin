@@ -26,7 +26,8 @@
       hostile: $("#hostile").value,
       font: $("#font").value,
       site: $("#site").value,
-      noroot: $("#container").value === "noroot" ? "1" : "0"
+      noroot: $("#container").value === "noroot" ? "1" : "0",
+      coverage: $("#coverage").value
     });
     return "chat.html?" + params.toString();
   }
@@ -34,9 +35,10 @@
   function updateFrameBar() {
     $("#frame-url").textContent = HOSTS[$("#site").value] + "/a/chat/s/1  ·  mock page";
     $("#frame-note").textContent =
-      "build: " + ($("#engine").value === "before" ? "before fix (v0.1.0)" : "after fix (v0.2.0)") +
+      "build: " + ($("#engine").value === "before" ? "before fix (v0.1.0)" : "after fix (v0.2.1)") +
       " · extension: " + ($("#ext").value === "off" ? "off" : "on") +
       " · css: " + ($("#hostile").value === "1" ? "hostile" : "friendly") +
+      " · coverage: " + ($("#coverage").value === "all" ? "all sites" : "built-in list") +
       ($("#container").value === "noroot" ? " · no <main>" : "");
   }
 
@@ -81,7 +83,7 @@
     score.innerHTML =
       '<span class="big ' + (fails.length ? "bad" : "ok") + '">' + (total - fails.length) + "/" + total + "</span>" +
       "probes pass · build <strong>" +
-      ESC(data.engine === "before" ? "v0.1.0 (before fix)" : "v0.2.0 (after fix)") + "</strong>" +
+      ESC(data.engine === "before" ? "v0.1.0 (before fix)" : "v0.2.1 (after fix)") + "</strong>" +
       " · extension <strong>" + (data.extOn ? "ON" : "OFF") + "</strong>" +
       " · mode <strong>" + ESC(data.applyMode) + "</strong>" +
       (data.engineStats
@@ -123,7 +125,7 @@
     }
   });
 
-  ["#engine", "#ext", "#mode", "#hostile", "#font", "#site", "#container"].forEach((sel) => {
+  ["#engine", "#ext", "#mode", "#hostile", "#font", "#site", "#container", "#coverage"].forEach((sel) => {
     $(sel).addEventListener("change", reload);
   });
   $("#rerun").addEventListener("click", reload);

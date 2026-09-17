@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ParsiChin v0.2.0 — commit every changed file under YOUR name (6 short commits).
+# ParsiChin v0.2.1 — commit every changed file under YOUR name (6 short commits).
 #
 # Use it in a clone that already contains the changes as uncommitted edits, e.g.
 #   git clone https://github.com/aghrabooti/ParsiChin.git && cd ParsiChin
@@ -38,9 +38,9 @@ git commit -m "feat: rtl lab"
 git add CHANGELOG.md COMMANDS.md COMMITS.txt CONTRIBUTING.md README.md ROADMAP.md STORE.md PRIVACY.md INSTALL.md commit-all.sh docs
 git commit -m "docs: rtl report"
 
-# --------------------------------------------- 6) release v0.2.0
+# --------------------------------------------- 6) release v0.2.1
 git add .gitignore package.json package-lock.json scripts/build.sh scripts/check.sh scripts/ci-check.sh scripts/store-check.sh
-git commit -m "chore: v0.2.0"
+git commit -m "chore: v0.2.1"
 
 # ------------------------------------------------- push
 # git push -u origin HEAD          # then open a PR, or: git push origin HEAD:main

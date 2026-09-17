@@ -5,7 +5,8 @@ this project uses semantic versioning.
 
 ## [0.2.0] — RTL engine rewrite
 
-Fixes every defect found by the new browser audit; the same fixture fails **35 → 0** of 114 probes.
+Fixes every defect found by the new browser audit. With the current fixtures the v0.1.0 sources fail
+**61 → 0** of 174 probes.
 
 ### Fixed
 
@@ -47,7 +48,20 @@ Fixes every defect found by the new browser audit; the same fixture fails **35 �
      specificity than `.pc-rtl` could still win. Decorated blocks now also get an inline
      `direction`/`text-align` with `!important` (inline `!important` beats every author rule),
      and the element's own original `dir` **and** inline values are restored on cleanup.
-* **"Works on every site" is now a one-click flow.** Any page can be enabled from the popup:
+* **Every site, by default — no setup at all.** The wildcard host access moved from
+  `optional_host_permissions` into `host_permissions` and the content script now matches `*://*/*`, so
+  the extension starts fixing Persian text on any http(s) page right after installation. The extension
+  stores are excluded in the manifest, and the script itself also refuses to touch
+  `chrome.google.com`, `accounts.google.com`, `addons.mozilla.org` and non-HTML documents.
+  `allSites: false` still limits it to the built-in list, and `siteOverrides` can exclude single hosts;
+  the popup reports the state and offers to switch a host back on.
+* **Cost control for unfamiliar pages.** A page whose text contains no Persian letters is skipped
+  before the walk starts (checked with `textContent`, which does not force a layout pass), and every
+  scan is capped at 20 000 visited elements / 3 000 decorated blocks. Running everywhere stays cheap.
+* **Double-injection guard.** With the static content script matching everything, the dynamic
+  registration is skipped when the wildcard is already granted, and `window.__parsiChinBooted` makes a
+  second injection a no-op.
+* **"Works on every site" is also a one-click flow** when the user restricts site access. Any page can be enabled from the popup:
   **Enable on this site** requests only that origin (`https://host/*`, a subset of the declared
   optional patterns) and injects the content script into the open tab immediately, so the text is
   fixed without a reload; **Enable on all sites** requests the full pattern and switches the mode on.

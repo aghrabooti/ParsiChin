@@ -18,7 +18,7 @@
         <a href="/">Overview</a>
         <a href="/demo/" class="active">RTL lab</a>
         <a href="/download/">Downloads</a>
-        <a href="/ParsiChin-v0.2.0.zip">Project zip</a>
+        <a href="/ParsiChin-v0.2.1.zip">Project zip</a>
         <a href="https://github.com/aghrabooti/ParsiChin" target="_blank" rel="noopener">Repository</a>
       </span>
     </div>
@@ -32,13 +32,13 @@
         <p class="lede">
           The real content script and the real stylesheet are loaded into a mock AI chat page, then every
           probe is measured in your browser: base direction, edge alignment, list markers, direction
-          leaks and line-by-line flip-flop. Switch the build to see the v0.1.0 defects and the v0.2.0 fix.
+          leaks and line-by-line flip-flop. Switch the build to see the v0.1.0 defects and the v0.2.1 fix.
         </p>
       </div>
       <div class="lab-head-side">
         <a class="btn small" href="/">Overview</a>
         <a class="btn small" href="/download/">Downloads</a>
-        <a class="btn small primary" href="/dist/parsi-chin-v0.2.0.zip" download>Extension build</a>
+        <a class="btn small primary" href="/dist/parsi-chin-v0.2.1.zip" download>Extension build</a>
       </div>
     </section>
 
@@ -50,7 +50,7 @@
       <div class="controls">
         <label><span>Build</span>
           <select id="engine">
-            <option value="after" selected>After fix (v0.2.0)</option>
+            <option value="after" selected>After fix (v0.2.1)</option>
             <option value="before">Before fix (v0.1.0 snapshot)</option>
           </select>
         </label>
@@ -80,6 +80,13 @@
           <select id="container">
             <option value="normal" selected>normal (has &lt;main&gt;)</option>
             <option value="noroot">redesigned (no container)</option>
+          </select>
+        </label>
+
+        <label><span>Coverage</span>
+          <select id="coverage">
+            <option value="all" selected>all sites (default)</option>
+            <option value="listed">built-in list only</option>
           </select>
         </label>
 
@@ -170,20 +177,20 @@
           <a href="/download/">/download/</a>.</span>
       </div>
       <div class="dl-grid">
-        <a class="dl-card primary-file" href="/dist/parsi-chin-v0.2.0.zip" download>
+        <a class="dl-card primary-file" href="/dist/parsi-chin-v0.2.1.zip" download>
           <strong>Extension build — load unpacked</strong>
           <span>The packaged extension itself: unzip, then chrome://extensions → Developer mode → Load unpacked.</span>
-          <em id="dl-build-url">/dist/parsi-chin-v0.2.0.zip</em>
+          <em id="dl-build-url">/dist/parsi-chin-v0.2.1.zip</em>
         </a>
-        <a class="dl-card" href="/ParsiChin-v0.2.0.zip" download>
-          <strong>Project zip — v0.2.0</strong>
+        <a class="dl-card" href="/ParsiChin-v0.2.1.zip" download>
+          <strong>Project zip — v0.2.1</strong>
           <span>Every project file: source, bundled fonts, docs, tests, the lab and the audit tool.</span>
-          <em id="dl-zip-url">/ParsiChin-v0.2.0.zip</em>
+          <em id="dl-zip-url">/ParsiChin-v0.2.1.zip</em>
         </a>
-        <a class="dl-card" href="/ParsiChin-v0.2.0.patch" download>
+        <a class="dl-card" href="/ParsiChin-v0.2.1.patch" download>
           <strong>Changes patch — all commits</strong>
-          <span>Every change as a git patch: <code>git am ParsiChin-v0.2.0.patch</code> replays it onto the base.</span>
-          <em id="dl-patch-url">/ParsiChin-v0.2.0.patch</em>
+          <span>Every change as a git patch: <code>git am ParsiChin-v0.2.1.patch</code> replays it onto the base.</span>
+          <em id="dl-patch-url">/ParsiChin-v0.2.1.patch</em>
         </a>
         <a class="dl-card" href="/COMMITS.txt" download>
           <strong>Commit log — COMMITS.txt</strong>
@@ -205,7 +212,7 @@
 
   <footer class="foot">
     <div class="wrap foot-inner">
-      <span>ParsiChin v0.2.0 · Chrome MV3 · MIT</span>
+      <span>ParsiChin v0.2.1 · Chrome MV3 · MIT</span>
       <span class="mono">the lab runs the same files the extension ships</span>
       <span style="margin-inline-start:auto"><a href="/">Overview</a> · <a href="/download/">Downloads</a></span>
     </div>

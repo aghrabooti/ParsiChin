@@ -1,6 +1,6 @@
 # ParsiChin — Privacy Policy
 
-_Last updated: 2026-09-18 · applies to the ParsiChin browser extension (version 0.2.0 and later)._
+_Last updated: 2026-09-18 · applies to the ParsiChin browser extension (version 0.2.1 and later)._
 
 ## Short version
 
