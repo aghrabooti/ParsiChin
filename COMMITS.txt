@@ -2,9 +2,9 @@ ParsiChin v0.2.0 — commit log
 ==========================
 
 Base commit : 9f5fa71  test(smoke): enhance smoke tests for DeepSeek layout and Persian text handling
-Head        : 39b52a8
-Commits     : 31
-Files       : 46 changed
+Head        : 4d9fd19
+Commits     : 38
+Files       : 49 changed
 
 Everything is pushed to the branch arena/01a0b0f4-parsichin (PR #1) and is also
 available as a patch that replays the whole change set onto main:
@@ -14,13 +14,20 @@ available as a patch that replays the whole change set onto main:
       git checkout main && git checkout -b rtl-fix
       git -c user.name=me -c user.email=me@example.com am --3way ../ParsiChin-v0.2.0.patch
 
-Or group the changes into seven short commits under your own name:
+Or group the changes into six short commits under your own name:
 
   bash commit-all.sh     # then: git push -u origin HEAD
 
 --------------------------------------------------------------------------
 Applied commits (newest first)
 --------------------------------------------------------------------------
+  4d9fd19  2026-09-17 21:25  chore: keep commit script current
+  682611a  2026-09-17 21:25  docs: refresh numbers
+  5fe5c5d  2026-09-17 21:25  test: server pages
+  28d7813  2026-09-17 21:25  feat(demo): new lab design
+  42125fc  2026-09-17 21:25  feat(server): designed pages
+  0a98957  2026-09-17 21:18  chore: keep commit script current
+  30c9c44  2026-09-17 21:18  docs: refresh commit log
   39b52a8  2026-09-17 21:18  docs: diagnose rtl
   7690a1a  2026-09-17 21:18  feat(demo): no-main switch
   46c508d  2026-09-17 21:18  test: missing root case
@@ -59,7 +66,7 @@ Applied commits (newest first)
 The same change set, grouped the way commit-all.sh commits it
 --------------------------------------------------------------------------
 
-COMMIT 1/7 — fix: optional host permission
+COMMIT 1/6 — fix: optional host permission
 Files:
   src/options/options.js
   src/background/service-worker.js
@@ -81,14 +88,15 @@ Changes:
     * rejections are caught and the warning under the switch reflects the real state;
     * the service worker re-registers dynamic scripts on chrome.permissions.onAdded.
 
-COMMIT 2/7 — fix: rtl per block
+COMMIT 2/6 — fix: rtl per block
 Files:
   src/content/bidi.js
   src/content/entry.js
   src/content/rules.js
   styles/parsi-chin.css
+  src/popup/popup.js
 Command:
-  git add src/content/bidi.js src/content/entry.js src/content/rules.js styles/parsi-chin.css
+  git add src/content/bidi.js src/content/entry.js src/content/rules.js styles/parsi-chin.css src/popup/popup.js
   git commit -m "fix: rtl per block"
 Changes:
   Direction is decided once per block from content statistics instead of dir="auto" (which
@@ -98,36 +106,40 @@ Changes:
   items; English content inside an RTL block is pinned back to LTR; .pc-rtl/.pc-ltr carry the
   !important rules so a site's own direction CSS cannot win; long paragraphs are processed.
 
-COMMIT 3/7 — test: rtl audit
+COMMIT 3/6 — test: rtl audit
 Files:
   tests/smoke.test.js
+  tests/ui-sanity.test.js
   tests/permissions.test.js
   tools/rtl-audit.js
 Command:
-  git add tests/smoke.test.js tests/permissions.test.js tools/rtl-audit.js
+  git add tests/smoke.test.js tests/ui-sanity.test.js tests/permissions.test.js tools/rtl-audit.js
   git commit -m "test: rtl audit"
 Changes:
   One regression assertion per defect. tests/permissions.test.js reproduces the manifest/
   permission mismatch with a Chrome stub that rejects undeclared origins exactly like Chrome.
-  tools/rtl-audit.js loads the real sources into headless Chromium and measures 95 probes
-  across five scenarios (plain, DeepSeek container, site LTR CSS, site LTR !important,
-  native RTL): 22 failing before the RTL fix, 0 after.
+  tools/rtl-audit.js loads the real sources into headless Chromium and measures 114 probes
+  across six scenarios (plain, DeepSeek container, missing container, site LTR CSS, site LTR
+  !important, native RTL): 35 failing with the v0.1.0 sources, 0 after the fix.
 
-COMMIT 4/7 — feat: rtl lab
+COMMIT 4/6 — feat: rtl lab
 Files:
   demo/*
   tools/serve.js
+  tools/pages.js
 Command:
-  git add demo/* tools/serve.js
+  git add demo/* tools/serve.js tools/pages.js
   git commit -m "feat: rtl lab"
 Changes:
   Live lab (npm run demo): the real content script and stylesheet run inside a mock chat page
   and every probe is measured in the visitor's browser, with switches for the current build vs
   the v0.1.0 snapshot (demo/legacy/), a hostile direction: ltr !important stylesheet, the
-  DeepSeek container rule, apply mode and font. tools/serve.js serves the repo root and offers
-  the download bundles at /download/.
+  DeepSeek container rule, apply mode and font, plus a switch for a redesigned page with no
+  container at all (the DeepSeek case). tools/serve.js serves the repo root, builds the
+  overview and download pages (tools/pages.js + demo/site-theme.css) and offers the bundles
+  with size and sha256 at /download/.
 
-COMMIT 5/7 — docs: rtl report
+COMMIT 5/6 — docs: rtl report
 Files:
   CHANGELOG.md
   COMMANDS.md
@@ -144,9 +156,9 @@ Changes:
   docs/rtl-audit.md: the root-cause audit with measurements, before/after screenshots and the
   raw reports (docs/rtl-audit-*.json). README/CONTRIBUTING/ROADMAP rewritten in English;
   CHANGELOG lists every fix; COMMANDS.md is the copy-paste guide; commit-all.sh commits the
-  whole change set in the seven groups described here.
+  whole change set in the six groups described here.
 
-COMMIT 6/7 — chore: v0.2.0
+COMMIT 6/6 — chore: v0.2.0
 Files:
   .gitignore
   package.json
