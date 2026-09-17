@@ -44,6 +44,13 @@ cd ParsiChin
 # git -c user.name=me -c user.email=me@example.com am --3way ../ParsiChin-v0.2.0.patch
 
 # ------------------------------------------------------------------
+# 5b) or commit the changes yourself with short messages
+# ------------------------------------------------------------------
+# (see commit-all.sh — 5 groups, one commit each)
+# git reset --soft 9f5fa71 && git reset     # keep the changes, drop the history
+# bash commit-all.sh
+
+# ------------------------------------------------------------------
 # 6) install, test, build
 # ------------------------------------------------------------------
 npm install
