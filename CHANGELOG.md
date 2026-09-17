@@ -33,8 +33,24 @@ Fixes every defect found by the new browser audit; the same 95-probe fixture fai
 * **Direction stuck after streaming.** Re-classification could only upgrade a block; it can now correct a
   block whose direction changed while text arrived.
 
+* **"All sites" mode failed with `Only permissions specified in the manifest may be
+  requested`.** The options page asked for the literal `<all_urls>` pattern while
+  `manifest.json` declares the wildcard host pattern, and Chrome rejects every pattern the
+  manifest does not declare. It was an unhandled rejection (visible in the console), the
+  permission never became granted, and both "all sites" and custom-site injection silently
+  did nothing because the service worker checked the same wrong pattern. The pattern now
+  lives in one place per context (`ALL_ORIGINS`), `permissions.request()` is called first in
+  the gesture handler (awaiting anything else makes Chrome drop the user gesture), and the
+  denial hint is no longer hidden again by an unrelated successful sync.
+* **Denied-permission warning disappeared immediately.** `syncScripts()` hid the warning right
+  after `ensurePermission()` had shown it; the denial state is now remembered and reported
+  when the options page opens with "all sites" on but no permission.
+
 ### Added
 
+* `tests/permissions.test.js` — reproduces the manifest/permission mismatch with a Chrome stub
+  that is as strict as the real API (it rejects any undeclared origin), plus regression checks
+  for the unhandled rejection, the granted path and the denied path.
 * `tools/rtl-audit.js` — headless-Chromium audit that loads the real content scripts and stylesheet,
   measures base direction, alignment, list markers, per-line flip-flop and direction leaks across five
   scenarios, and can run in `--json` / `--strict` mode.

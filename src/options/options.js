@@ -24,6 +24,23 @@
   let settings = null;
   let saveTimer = null;
 
+  /**
+   * Host patterns the optional permission covers. This MUST equal
+   * `optional_host_permissions` in manifest.json character for character:
+   * chrome.permissions.request() rejects every pattern the manifest does not
+   * declare ("Only permissions specified in the manifest may be requested"),
+   * and the manifest's wildcard host pattern is NOT the same as <all_urls>.
+   */
+  const ALL_ORIGINS = ["*://*/*"];
+
+  const HINT_PERMISSION_DENIED =
+    "⚠️ دسترسی «همه‌ی سایت‌ها» رد شد — این حالت بدون آن کار نمی‌کند.";
+  const HINT_SYNC_FAILED =
+    "⚠️ فعال‌سازی خودکار ممکن نشد؛ افزونه را در chrome://extensions دوباره بارگذاری کنید.";
+
+  /** True after the user (or the browser) refused the optional permission. */
+  let permissionDenied = false;
+
   /* ---------------- helpers ---------------- */
 
   function showStatus(text, isError) {
@@ -33,6 +50,22 @@
     line.style.color = isError ? "#dc2626" : "#0f766e";
     clearTimeout(showStatus._t);
     showStatus._t = setTimeout(function () { line.hidden = true; }, 4000);
+  }
+
+  /** Show/hide the warning under the "all sites" switch. */
+  function showAllSitesHint(show, message) {
+    const hint = $("#allSitesHint");
+    if (message) hint.textContent = message;
+    hint.hidden = !show;
+  }
+
+  /** Does the optional host permission exist right now? */
+  async function hasAllSitesPermission() {
+    try {
+      return await chrome.permissions.contains({ origins: ALL_ORIGINS });
+    } catch (e) {
+      return false;
+    }
   }
 
   function debouncedSave() {
@@ -126,24 +159,42 @@
         settings: settings
       });
       if (res && res.ok === false) {
-        $("#allSitesHint").hidden = false;
+        showAllSitesHint(true, HINT_SYNC_FAILED);
         return false;
       }
-      $("#allSitesHint").hidden = true;
+      // Keep the "permission denied" warning visible: a successful sync of
+      // *other* settings must not hide why "all sites" is off.
+      if (!permissionDenied) showAllSitesHint(false);
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  // Need the optional <all_urls> permission for "all sites" and custom sites.
+  /**
+   * Ask for the optional host permission ("all sites" and custom sites).
+   *
+   * Two rules keep this working:
+   *  1. the requested patterns must be declared in manifest.json
+   *     (`optional_host_permissions`), hence ALL_ORIGINS;
+   *  2. request() must be the first thing awaited in the user-gesture handler —
+   *     Chrome drops the gesture when another promise is awaited first, so we
+   *     do NOT call contains() before it. request() resolves true immediately
+   *     when the permission is already granted, so nothing is lost.
+   */
   async function ensurePermission() {
-    const has = await chrome.permissions.contains({ origins: ["<all_urls>"] });
-    if (has) return true;
-    // Called from a user gesture (change event).
-    const granted = await chrome.permissions.request({ origins: ["<all_urls>"] });
-    if (!granted) $("#allSitesHint").hidden = false;
-    return granted;
+    try {
+      const granted = await chrome.permissions.request({ origins: ALL_ORIGINS });
+      permissionDenied = !granted;
+      if (!granted) showAllSitesHint(true, HINT_PERMISSION_DENIED);
+      else showAllSitesHint(false);
+      return granted;
+    } catch (err) {
+      permissionDenied = true;
+      showAllSitesHint(true, HINT_PERMISSION_DENIED);
+      showStatus("درخواست دسترسی ناموفق بود: " + err.message, true);
+      return false;
+    }
   }
 
   /* ---------------- preview ---------------- */
@@ -210,13 +261,25 @@
     writeForm(settings);
     applyPreview();
 
+    // "all sites" can be on while the permission is missing (fresh install
+    // from an imported backup, permission revoked later, ...) — say so.
+    if (settings.allSites && !(await hasAllSitesPermission())) {
+      permissionDenied = true;
+      showAllSitesHint(true, HINT_PERMISSION_DENIED);
+    }
+
     Object.keys(FIELDS).forEach(function (id) {
       const el = $("#" + id);
       const key = FIELDS[id];
       el.addEventListener("change", async function () {
-        if (key === "allSites" && el.checked) {
-          const granted = await ensurePermission();
-          if (!granted) el.checked = false;
+        if (key === "allSites") {
+          if (el.checked) {
+            const granted = await ensurePermission();
+            if (!granted) el.checked = false;
+          } else {
+            permissionDenied = false;
+            showAllSitesHint(false);
+          }
         }
         debouncedSave();
       });

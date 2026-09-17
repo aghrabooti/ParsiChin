@@ -6,7 +6,7 @@
   "scripts": {
     "check": "bash scripts/check.sh",
     "build": "bash scripts/build.sh",
-    "test": "node tests/smoke.test.js && node tests/ui-sanity.test.js",
+    "test": "node tests/smoke.test.js && node tests/ui-sanity.test.js && node tests/permissions.test.js",
     "audit:rtl": "node tools/rtl-audit.js",
     "demo": "node tools/serve.js"
   },
