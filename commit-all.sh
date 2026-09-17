@@ -19,11 +19,11 @@ git config user.name  "Your Name"
 git config user.email "you@example.com"
 
 # --------------------------------------------- 1) optional host permission fix
-git add src/options/options.js src/background/service-worker.js src/shared/defaults.js manifest.json docs/img/downloads.png
+git add src/options/options.js src/background/service-worker.js src/shared/defaults.js manifest.json docs/img/downloads.png docs/img/popup.png
 git commit -m "fix: optional host permission"
 
 # --------------------------------------------- 2) direction engine + CSS
-git add src/content/bidi.js src/content/entry.js src/content/rules.js styles/parsi-chin.css src/popup/popup.js
+git add src/content/bidi.js src/content/entry.js src/content/rules.js styles/parsi-chin.css src/popup/popup.js src/popup/popup.html src/popup/popup.css
 git commit -m "fix: rtl per block"
 
 # --------------------------------------------- 3) tests: audit + regressions
