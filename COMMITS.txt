@@ -2,9 +2,9 @@ ParsiChin v0.2.0 — commit log
 ==========================
 
 Base commit : 9f5fa71  test(smoke): enhance smoke tests for DeepSeek layout and Persian text handling
-Head        : 100afc9
-Commits     : 43
-Files       : 59 changed
+Head        : 530b38f
+Commits     : 46
+Files       : 60 changed
 
 Everything is pushed to the branch arena/01a0b0f4-parsichin (PR #1) and is also
 available as a patch that replays the whole change set onto main:
@@ -21,6 +21,9 @@ Or group the changes into six short commits under your own name:
 --------------------------------------------------------------------------
 Applied commits (newest first)
 --------------------------------------------------------------------------
+  530b38f  2026-09-17 21:35  chore: keep commit script current
+  7e5e9bb  2026-09-17 21:35  docs: free install guide
+  6f674e0  2026-09-17 21:33  docs: refresh commit log
   100afc9  2026-09-17 21:33  chore: keep commit script current
   ecde657  2026-09-17 21:33  feat(server): store links
   78207a6  2026-09-17 21:33  feat(tools): store assets
@@ -152,10 +155,13 @@ Files:
   CONTRIBUTING.md
   README.md
   ROADMAP.md
+  STORE.md
+  PRIVACY.md
+  INSTALL.md
   commit-all.sh
   docs/*
 Command:
-  git add CHANGELOG.md COMMANDS.md COMMITS.txt CONTRIBUTING.md README.md ROADMAP.md commit-all.sh docs/*
+  git add CHANGELOG.md COMMANDS.md COMMITS.txt CONTRIBUTING.md README.md ROADMAP.md STORE.md PRIVACY.md INSTALL.md commit-all.sh docs/*
   git commit -m "docs: rtl report"
 Changes:
   docs/rtl-audit.md: the root-cause audit with measurements, before/after screenshots and the
