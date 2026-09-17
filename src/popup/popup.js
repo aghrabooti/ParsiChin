@@ -6,6 +6,21 @@
 
   const $ = (sel) => document.querySelector(sel);
 
+  /**
+   * Ask the content script of that tab how many blocks it decorated. This is
+   * the fastest way to tell "the extension is not running here" apart from
+   * "it runs but found nothing to decorate" (e.g. a redesigned site whose
+   * container our rules do not know yet).
+   */
+  async function askStats(tab) {
+    if (!tab || tab.id === undefined || !chrome.tabs.sendMessage) return null;
+    try {
+      return await chrome.tabs.sendMessage(tab.id, { type: "parsi-chin:stats" });
+    } catch (e) {
+      return null; // no content script in that tab (unsupported page)
+    }
+  }
+
   function setStatus(className, siteName, detail) {
     const dot = $("#siteDot");
     dot.className = "dot" + (className ? " " + className : "");
@@ -28,8 +43,10 @@
     $("#enabled").checked = !!settings.enabled;
 
     let hostname = "";
+    let tab = null;
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+      tab = tabs && tabs[0];
       if (tab && tab.url) hostname = hostOf(tab.url);
     } catch (e) { /* leave hostname empty */ }
 
@@ -43,6 +60,16 @@
       setStatus("ok", "همه‌ی سایت‌ها", "حالت «همه‌ی سایت‌ها» فعال است؛ متن‌های فارسی تزئین می‌شوند.");
     } else {
       setStatus("", "این صفحه پشتیبانی نمی‌شود", "سایت را از تنظیمات اضافه کنید یا حالت «همه سایت‌ها» را فعال کنید.");
+    }
+
+    // Live diagnostics: how many blocks did the content script decorate?
+    const stats = await askStats(tab);
+    if (stats) {
+      const detail = $("#siteDetail");
+      const suffix = stats.blocks > 0
+        ? " · " + stats.blocks + " بلوک تزئین شد (فارسی: " + stats.persian + "، لاتین: " + stats.mixed + ")"
+        : " · هنوز هیچ بلوکی تزئین نشده — صفحه را دوباره بارگذاری کنید";
+      detail.textContent = detail.textContent + suffix;
     }
   }
 
