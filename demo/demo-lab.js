@@ -20,7 +20,8 @@
       mode: $("#mode").value,
       hostile: $("#hostile").value,
       font: $("#font").value,
-      site: $("#site").value
+      site: $("#site").value,
+      noroot: $("#container").value === "noroot" ? "1" : "0"
     });
     return "chat.html?" + params.toString();
   }
@@ -43,7 +44,11 @@
       `<span class="big ${fails.length ? "bad" : "ok"}">${total - fails.length}/${total}</span>` +
       `probes pass · build <strong>${ESC(data.engine === "before" ? "v0.1.0 (before fix)" : "v0.2.0 (after fix)")}</strong>` +
       ` · extension <strong>${data.extOn ? "ON" : "OFF"}</strong>` +
-      ` · mode <strong>${ESC(data.applyMode)}</strong>`;
+      ` · mode <strong>${ESC(data.applyMode)}</strong>` +
+      (data.engineStats
+        ? `<br>engine: root=<code>${ESC(data.engineStats.root)}</code>, decorated blocks=<strong>${data.engineStats.blocks}</strong>` +
+          ` (persian ${data.engineStats.persian}, latin ${data.engineStats.mixed}, pinned ${data.engineStats.pinnedLtr})`
+        : "");
 
     tbody.innerHTML = data.rows.map((r) => `
       <tr class="${r.verdict === "pass" ? "pass" : "fail"}">
@@ -72,7 +77,7 @@
     }
   });
 
-  ["#engine", "#ext", "#mode", "#hostile", "#font", "#site"].forEach((sel) => {
+  ["#engine", "#ext", "#mode", "#hostile", "#font", "#site", "#container"].forEach((sel) => {
     $(sel).addEventListener("change", reload);
   });
   $("#rerun").addEventListener("click", reload);
@@ -81,7 +86,7 @@
      full URL is what people need if the direct click is blocked). */
   (function showAbsoluteUrls() {
     const origin = location.origin;
-    ["#dl-zip-url", "#dl-patch-url", "#dl-commits-url"].forEach((sel) => {
+    ["#dl-build-url", "#dl-zip-url", "#dl-patch-url", "#dl-commits-url", "#dl-commands-url"].forEach((sel) => {
       const el = document.querySelector(sel);
       if (el) el.textContent = origin + el.textContent;
     });

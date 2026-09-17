@@ -24,9 +24,12 @@ const ATTACHMENT_EXT = new Set([".zip", ".patch", ".tar", ".gz", ".tgz", ".7z"])
 
 /** Bundles offered on the /download page (built from the git history). */
 const BUNDLES = [
+  { file: "dist/parsi-chin-v0.2.0.zip", label: "Extension build (load unpacked)", note: "the packaged extension itself — unzip, then chrome://extensions → Load unpacked" },
   { file: "ParsiChin-v0.2.0.zip", label: "Project zip (v0.2.0)", note: "every project file: source, fonts, docs, tests, demo" },
   { file: "ParsiChin-v0.2.0.patch", label: "Changes patch", note: "git format-patch of all commits (apply with: git am)" },
-  { file: "COMMITS.txt", label: "Commit log", note: "commit list with hashes and per-commit change description" }
+  { file: "COMMITS.txt", label: "Commit log", note: "commit list with hashes and per-commit change description" },
+  { file: "COMMANDS.md", label: "Copy-paste commands", note: "download, apply, test and run — one block" },
+  { file: "commit-all.sh", label: "Commit commands", note: "the git add/commit commands for every change, in order" }
 ];
 
 const MIME = {
