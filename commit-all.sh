@@ -27,7 +27,7 @@ git add src/content/bidi.js src/content/entry.js src/content/rules.js styles/par
 git commit -m "fix: rtl per block"
 
 # --------------------------------------------- 3) tests: audit + regressions
-git add tests/smoke.test.js tests/ui-sanity.test.js tests/permissions.test.js tools/rtl-audit.js
+git add tests/smoke.test.js tests/ui-sanity.test.js tests/permissions.test.js tools/rtl-audit.js tools/store-shots.js
 git commit -m "test: rtl audit"
 
 # --------------------------------------------- 4) live RTL lab
@@ -35,11 +35,11 @@ git add demo/chat-boot.js demo/chat.html demo/demo-chat.css demo/demo-lab.css de
 git commit -m "feat: rtl lab"
 
 # --------------------------------------------- 5) docs, audit report, screenshots
-git add CHANGELOG.md COMMANDS.md COMMITS.txt CONTRIBUTING.md README.md ROADMAP.md commit-all.sh docs/img/after-v0.2.0.png docs/img/before-v0.1.0.png docs/img/downloads.png docs/img/lab.png docs/img/landing.png docs/rtl-audit-after.json docs/rtl-audit-before.json docs/rtl-audit.md
+git add CHANGELOG.md COMMANDS.md COMMITS.txt CONTRIBUTING.md README.md ROADMAP.md STORE.md PRIVACY.md commit-all.sh docs
 git commit -m "docs: rtl report"
 
 # --------------------------------------------- 6) release v0.2.0
-git add .gitignore package.json package-lock.json scripts/build.sh scripts/check.sh scripts/ci-check.sh
+git add .gitignore package.json package-lock.json scripts/build.sh scripts/check.sh scripts/ci-check.sh scripts/store-check.sh
 git commit -m "chore: v0.2.0"
 
 # ------------------------------------------------- push
