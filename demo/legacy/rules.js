@@ -15,20 +15,11 @@
 (function () {
   "use strict";
 
-  /**
-   * Common tags that can hold a sentence / paragraph of mixed text.
-   *
-   * UL/OL are included on purpose: flipping only the <li> items leaves the
-   * list bullets on the left while the text jumps right, which looks broken.
-   * The list *container* must be flipped too (see `pc-list` in the stylesheet).
-   */
+  /** Common tags that can hold a sentence / paragraph of mixed text. */
   const TEXT_BLOCK_TAGS = [
     "P", "LI", "H1", "H2", "H3", "H4", "H5", "H6",
-    "BLOCKQUOTE", "TD", "TH", "DD", "DT", "FIGCAPTION", "UL", "OL"
+    "BLOCKQUOTE", "TD", "TH", "DD", "DT", "FIGCAPTION"
   ];
-
-  /** Tags whose text is always code and must never be treated as prose. */
-  const CODE_TAGS = "pre, code, kbd, samp";
 
   /** Elements we must never decorate. */
   const SKIP_SELECTOR = [
@@ -40,31 +31,12 @@
   ].join(",");
 
   /**
-   * True when every non-empty text node of the element lives inside
-   * <pre>/<code>/<kbd>/<samp>. Wrapper elements such as
-   * `<p><code>"سلام" = 1;</code></p>` used to be decorated (and flipped to
-   * RTL) even though their content is code.
-   */
-  function isCodeOnly(el) {
-    if (!(el instanceof Element) || !el.querySelector) return false;
-    if (!el.querySelector(CODE_TAGS)) return false;
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
-    let node;
-    while ((node = walker.nextNode())) {
-      if (!node.data.trim()) continue;
-      if (!node.parentElement || !node.parentElement.closest(CODE_TAGS)) return false;
-    }
-    return true;
-  }
-
-  /**
    * A "text block" is any of TEXT_BLOCK_TAGS, or a DIV/SPAN that contains
    * direct text (streaming AI replies often render raw text inside divs).
    */
   function isTextBlock(el) {
     if (!(el instanceof Element)) return false;
     if (el.matches(SKIP_SELECTOR)) return false;
-    if (isCodeOnly(el)) return false;
     if (TEXT_BLOCK_TAGS.indexOf(el.tagName) !== -1) return true;
     if (el.tagName === "DIV" || el.tagName === "SPAN" || el.tagName === "SECTION") {
       return window.ParsiChin.bidi.hasDirectText(el);
@@ -170,8 +142,6 @@
     TEXT_BLOCK_TAGS: TEXT_BLOCK_TAGS,
     SKIP_SELECTOR: SKIP_SELECTOR,
     isTextBlock: isTextBlock,
-    isCodeOnly: isCodeOnly,
-    CODE_TAGS: CODE_TAGS,
     ruleForHost: ruleForHost,
     ruleForUrl: ruleForUrl,
     hostMatchesRule: hostMatchesRule,

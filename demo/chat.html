@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mock AI chat — ParsiChin RTL lab</title>
+  <link rel="stylesheet" href="demo-chat.css" />
+  <!-- Optional "hostile" site CSS: many chat UIs hard-code LTR -->
+  <style id="hostileStyle" media="not all">
+    .markdown, .markdown p, .markdown li, .markdown td, .markdown th,
+    .markdown div, .markdown blockquote, .markdown code {
+      direction: ltr !important;
+      text-align: left !important;
+    }
+  </style>
+</head>
+<body>
+  <header class="chat-header">
+    <span class="brand">Mock AI chat</span>
+    <span class="meta" id="meta">loading…</span>
+  </header>
+
+  <main class="chat">
+    <div class="bubble assistant">
+      <div class="avatar">AI</div>
+      <div class="markdown prose">
+
+        <p class="probe" id="fa-pure" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>سلام! این یک پاسخ فارسی است و باید از سمت راست شروع شود.</p>
+
+        <p class="probe" id="fa-latin-heavy" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>با React و useState و useEffect و Redux و Axios و Vite و Webpack و Prisma و Zustand و MobX می‌توان رابط کاربری ساخت.</p>
+
+        <p class="probe" id="lat-list" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>React و TypeScript و Vite و ESLint و Prettier و Jest و Cypress و Storybook و Tailwind و Webpack.</p>
+
+        <p class="probe" id="en-pure" data-flavor="rect" data-flip-safety="1">The API returns a JSON payload with the model name.</p>
+
+        <p class="probe" id="code-only" data-flavor="rect" data-flip-safety="1"><code>"سلام" = 1;</code></p>
+
+        <p class="probe" id="digits-only" data-flavor="rect" data-flip-safety="1">۱۲۳۴۵۶</p>
+
+        <p class="probe" id="zigzag" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>React و TypeScript و Vite و ESLint و Prettier و Jest و Cypress و Storybook و Tailwind و Webpack.<br><bdi class="s-fa2">فارسی</bdi><bdi class="s-la2">Z</bdi>سلام! این یک پاسخ فارسی است و باید از سمت راست شروع شود.</p>
+
+        <ul id="fa-list">
+          <li class="probe" id="fa-li" data-flavor="sen" data-marker="1"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>مورد اول فهرست فارسی</li>
+          <li class="probe" id="fa-li-2" data-flavor="sen" data-marker="1"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>مورد دوم فهرست فارسی</li>
+        </ul>
+
+        <p class="probe" id="fa-inline-code" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>این جمله فارسی است و وسط آن <code>useState</code> آمده است.</p>
+
+        <table>
+          <tbody>
+            <tr>
+              <th class="probe" id="fa-th" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>نام</th>
+              <td class="probe" id="fa-td" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>مقدار فارسی</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="probe" id="fa-div" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>متن مستقیم داخل دایو.</div>
+
+        <pre class="probe" id="code-fa" data-flavor="rect" data-flip-safety="1"><code>// این خط توضیح فارسی است</code></pre>
+
+        <!-- container that holds a Persian line AND an English paragraph -->
+        <div class="probe card" id="fa-container" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>این متن فارسی داخل یک کانتینر است.
+          <p class="probe" id="en-inside" data-flavor="rect" data-flip-safety="1">This English paragraph shares a Persian container.</p>
+        </div>
+
+        <!-- DeepSeek-style markdown wrapper (no direct text, only children) -->
+        <div id="ds-markdown" class="ds-markdown">
+          <div class="paragraph"><p class="probe" id="fa-ds-inner" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>پاسخ فارسی داخل کانتینر مارک‌داون.</p></div>
+          <div class="paragraph"><p class="probe" id="fa-ds-inner2" data-flavor="sen"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>خط دوم پاسخ فارسی در همان کانتینر مارک‌داون.</p></div>
+          <p class="probe" id="en-ds-inner" data-flavor="rect" data-flip-safety="1">This English line shares the container.</p>
+        </div>
+
+        <p class="probe" id="fa-hostile" data-flavor="sen" style="direction:ltr"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>سلام! این یک پاسخ فارسی است و باید از سمت راست شروع شود.</p>
+
+      </div>
+    </div>
+  </main>
+
+  <script src="chat-boot.js"></script>
+</body>
+</html>

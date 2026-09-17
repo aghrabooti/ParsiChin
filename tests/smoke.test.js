@@ -37,6 +37,12 @@ async function main() {
         <pre id="code">const x = "سلام";</pre>
         <textarea id="ta">سلام</textarea>
         <div id="direct">متن مستقیم داخل دایو</div>
+        <p id="digits">۱۲۳۴۵۶</p>
+        <p id="codeOnly"><code>"سلام" = 1;</code></p>
+        <p id="latinList">React و TypeScript و Vite و ESLint و Prettier و Jest و Cypress و Storybook و Tailwind و Webpack.</p>
+        <p id="latinHeavyPersian">با React و useState و useEffect و Redux و Axios و Vite و Webpack و Prisma می‌توان رابط کاربری ساخت.</p>
+        <ul id="faList"><li id="faListItem">مورد اول فهرست فارسی</li></ul>
+        <div id="faWrapper">این متن فارسی داخل کانتینر است.<p id="enInside">This English paragraph shares a Persian container.</p></div>
       </div>
     </main>
   </body></html>`;
@@ -107,6 +113,31 @@ async function main() {
   const direct = window.document.getElementById("direct");
   assert.ok(direct.classList.contains("pc-block"), "div with direct text decorated");
 
+  /* ---------- regression: the defects fixed in 0.2.0 ---------- */
+  const digits = window.document.getElementById("digits");
+  assert.ok(!digits.classList.contains("pc-block"),
+    "regression: numbers-only block must stay untouched (digits are not Persian letters)");
+
+  const codeOnly = window.document.getElementById("codeOnly");
+  assert.ok(!codeOnly.classList.contains("pc-block") && !codeOnly.hasAttribute("dir"),
+    "regression: a paragraph whose whole content is <code> must not be flipped to RTL");
+
+  const latinList = window.document.getElementById("latinList");
+  assert.strictEqual(latinList.getAttribute("dir"), "ltr",
+    "regression: Latin list joined by \"و\" stays LTR (no auto flip)");
+
+  const latinHeavy = window.document.getElementById("latinHeavyPersian");
+  assert.strictEqual(latinHeavy.getAttribute("dir"), "rtl",
+    "regression: Latin-heavy Persian prose is RTL, not the first-strong-char LTR");
+  assert.ok(latinHeavy.classList.contains("pc-rtl"), "regression: rtl class drives the CSS");
+
+  const faList = window.document.getElementById("faList");
+  assert.ok(faList.classList.contains("pc-list") && faList.classList.contains("pc-rtl"),
+    "regression: the list container is flipped so bullets stay next to the text");
+  assert.strictEqual(faList.getAttribute("dir"), "rtl", "Persian list container dir=rtl");
+  assert.strictEqual(window.document.getElementById("faListItem").getAttribute("dir"), "rtl",
+    "Persian list items are RTL too");
+
   const nativeRtl = window.document.getElementById("nativeRtl");
   assert.strictEqual(nativeRtl.getAttribute("dir"), "rtl", "native dir kept while enabled");
 
@@ -119,13 +150,40 @@ async function main() {
   assert.ok(streamed.classList.contains("pc-block"), "streamed paragraph decorated");
   assert.strictEqual(streamed.getAttribute("dir"), "rtl", "streamed paragraph dir=rtl");
 
+  /* ---------- containment: English inside a flipped container ---------- */
+  const wrapper = window.document.getElementById("faWrapper");
+  assert.ok(wrapper.classList.contains("pc-rtl"),
+    "Persian container holding an English paragraph is RTL");
+  const enInside = window.document.getElementById("enInside");
+  assert.strictEqual(enInside.getAttribute("dir"), "ltr",
+    "regression: English paragraph inside an RTL block is pinned back to LTR");
+  assert.ok(enInside.classList.contains("pc-ltr"), "pinned block carries the pc-ltr class");
+  assert.strictEqual(enInside.classList.contains("pc-block"), false,
+    "pinned English content is not restyled (no pc-block)");
+
   /* ---------- bidi unit checks ---------- */
   const bidi = window.ParsiChin.bidi;
   assert.strictEqual(bidi.directionFor("persian"), "rtl");
-  assert.strictEqual(bidi.directionFor("mixed"), "auto");
+  assert.strictEqual(bidi.directionFor("mixed"), "ltr",
+    "mixed blocks get a stable direction instead of dir=auto (regression: first-strong-char flipped Persian prose to LTR)");
+  assert.strictEqual(bidi.classify("۱۲۳۴۵").kind, "none",
+    "Persian digits are not Persian letters (regression: numbers-only blocks were flipped)");
+  assert.strictEqual(bidi.persianWordCount("React و TypeScript و Vite"), 0,
+    "a lone conjunction is not evidence of Persian prose");
+  assert.strictEqual(bidi.classify("با React و useState و useEffect و Redux و Axios و Vite و Webpack و Prisma می‌توان رابط کاربری ساخت.").direction, "rtl",
+    "Latin-heavy but Persian-first prose must still be RTL");
   assert.strictEqual(bidi.directionFor("none"), null);
   assert.strictEqual(bidi.normalizePunctuation("سلام, دنیا"), "سلام، دنیا");
   assert.strictEqual(bidi.normalizePunctuation("hello, world"), "hello, world");
+
+  /* ---------- long answers are still processed ---------- */
+  const longP = window.document.createElement("p");
+  longP.id = "longAnswer";
+  longP.textContent = "این پاسخ بسیار طولانی است و باید راست‌چین شود. ".repeat(2000); // ~62k chars
+  root.appendChild(longP);
+  await tick(60);
+  assert.strictEqual(longP.getAttribute("dir"), "rtl",
+    "regression: a very long paragraph is still decorated (only giant containers are skipped)");
 
   /* ---------- toggle OFF ---------- */
   const full = (enabled) => Object.assign({}, store.parsiChinSettings, { enabled });

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ParsiChin — RTL behaviour lab</title>
+  <link rel="stylesheet" href="demo-lab.css" />
+</head>
+<body>
+  <header class="lab-header">
+    <div>
+      <h1>ParsiChin — RTL behaviour lab</h1>
+      <p class="sub">
+        The real content script and the real stylesheet are loaded into a mock AI chat page,
+        then every probe is measured in your browser (base direction, alignment, list markers,
+        direction leaks). Switch builds to see the v0.1.0 defects and the v0.2.0 fix.
+      </p>
+    </div>
+    <nav class="downloads">
+      <a class="ghost" href="/download/" target="_blank" rel="noopener">All downloads</a>
+      <a class="ghost" href="https://github.com/aghrabooti/ParsiChin" target="_blank" rel="noopener">Repository</a>
+    </nav>
+  </header>
+
+  <section class="dl-panel">
+    <h2>Download the project files</h2>
+    <p class="dl-sub">Served directly from this live server (the same box that runs the lab).</p>
+    <div class="dl-grid">
+      <a class="dl-card" href="/ParsiChin-v0.2.0.zip" download>
+        <strong>Project zip — v0.2.0</strong>
+        <span>Every project file: extension source, bundled fonts, docs, tests, the RTL lab and the audit tool.</span>
+        <em id="dl-zip-url">/ParsiChin-v0.2.0.zip</em>
+      </a>
+      <a class="dl-card" href="/ParsiChin-v0.2.0.patch" download>
+        <strong>Changes patch — all commits</strong>
+        <span>Every change as a git patch: <code>git am ParsiChin-v0.2.0.patch</code> replays the full fix onto the base commit.</span>
+        <em id="dl-patch-url">/ParsiChin-v0.2.0.patch</em>
+      </a>
+      <a class="dl-card" href="/COMMITS.txt" download>
+        <strong>Commit log — COMMITS.txt</strong>
+        <span>Commit hashes plus, per commit, the files it touches and everything it changes.</span>
+        <em id="dl-commits-url">/COMMITS.txt</em>
+      </a>
+      <a class="dl-card" href="/COMMANDS.md" download>
+        <strong>Copy-paste commands — COMMANDS.md</strong>
+        <span>One block that downloads the files, applies the patch, runs the tests and starts the lab.</span>
+        <em id="dl-commands-url">/COMMANDS.md</em>
+      </a>
+    </div>
+    <p class="dl-hint" id="dl-hint">
+      If a click opens the file instead of saving it, right-click → “Save link as…”, or copy the URL shown on the card.
+    </p>
+  </section>
+
+  <section class="controls">
+    <label>
+      <span>Build</span>
+      <select id="engine">
+        <option value="after" selected>After fix (v0.2.0)</option>
+        <option value="before">Before fix (v0.1.0 snapshot)</option>
+      </select>
+    </label>
+
+    <label>
+      <span>Extension</span>
+      <select id="ext">
+        <option value="on" selected>ON</option>
+        <option value="off">OFF (page untouched)</option>
+      </select>
+    </label>
+
+    <label>
+      <span>Apply mode</span>
+      <select id="mode">
+        <option value="auto" selected>auto (Persian blocks only)</option>
+        <option value="always">always (every block)</option>
+      </select>
+    </label>
+
+    <label>
+      <span>Site stylesheet</span>
+      <select id="hostile">
+        <option value="0" selected>friendly (LTR only on wrappers)</option>
+        <option value="1">hostile (direction: ltr !important)</option>
+      </select>
+    </label>
+
+    <label>
+      <span>Host rule</span>
+      <select id="site">
+        <option value="deepseek" selected>DeepSeek (.ds-markdown container)</option>
+        <option value="chatgpt">ChatGPT (plain &lt;main&gt;)</option>
+      </select>
+    </label>
+
+    <label>
+      <span>Font</span>
+      <select id="font">
+        <option value="vazirmatn" selected>bundled Vazirmatn</option>
+        <option value="system">page font</option>
+      </select>
+    </label>
+
+    <button id="rerun">Reload chat</button>
+  </section>
+
+  <section class="score">
+    <div class="score-card" id="score">waiting for the chat frame…</div>
+    <div class="legend">
+      <p><strong>What is checked</strong> — Persian prose must render right-to-left and hug the right edge;
+      English-only text must stay left-to-right (even inside a Persian container such as DeepSeek's
+      <code>.ds-markdown</code>); list bullets must sit next to their text; a block must not flip
+      direction from one line to the next; numbers-only and code-only blocks must be left alone.</p>
+      <p><strong>Failure meanings</strong> — <code>base=ltr</code>: the block is laid out left-to-right.
+      <code>align=left</code>: the Persian text hugs the left edge. <code>marker stays left</code>: bullets
+      were left behind. <code>per-line flip-flop</code>: lines disagree about direction.</p>
+    </div>
+  </section>
+
+  <section class="frame-wrap">
+    <iframe id="chat" src="chat.html" title="Mock AI chat"></iframe>
+  </section>
+
+  <section class="results">
+    <h2>Probe results</h2>
+    <table id="results">
+      <thead>
+        <tr>
+          <th>probe</th><th>expect</th><th>dir attr</th><th>direction</th><th>text-align</th>
+          <th>base dir</th><th>align</th><th>lines</th><th>marker</th><th>classes</th><th>verdict</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <script src="demo-lab.js"></script>
+</body>
+</html>

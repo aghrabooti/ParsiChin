@@ -1,84 +1,142 @@
-# پارسی‌چین (ParsiChin)
+# ParsiChin
 
-افزونه‌ی کروم (Manifest V3) که متن‌های **تلفیقی فارسی و انگلیسی** را در وب‌پیج‌ها — مخصوصاً پیج‌های هوش مصنوعی مثل ChatGPT، Claude، Gemini و Perplexity — برای خواننده‌ی فارسی‌زبان **خوانا** می‌کند.
+A Chrome extension (Manifest V3) that makes **mixed Persian/English answers readable** on AI chat pages —
+ChatGPT, Claude, Gemini, Perplexity, DeepSeek, Microsoft Copilot, Le Chat (Mistral) and Hugging Face Chat.
 
-## مشکل چیست؟
+> **v0.2.0 — RTL engine rewrite.** The previous version delegated direction to `dir="auto"` and
+> `unicode-bidi: plaintext`, which silently rendered Persian paragraphs left-to-right and flipped the
+> layout line by line. The full audit (root causes + measurements) is in
+> **[docs/rtl-audit.md](docs/rtl-audit.md)**. Same 95-probe fixture in headless Chromium:
+> **22 failing before → 0 failing after.**
 
-خروجی مدل‌های زبانی اغلب یک پاراگراف است که جمله‌ی فارسی و کلمات انگلیسی (مثل `Prompt`، `Model`، `API`) را با هم دارد. مرورگر برای چنین متن‌هایی جهت و فاصله‌ی خطوط را درست محاسبه نمی‌کند؛ نتیجه: راست‌چین‌های ناهماهنگ، کلماتِ وسط جمله گم می‌شوند و خط‌ها روی هم می‌افتند.
+## The problem
 
-## راه‌حل
+An LLM answer is usually one paragraph long and mixes Persian prose with English tokens
+(`Prompt`, `Model`, `useState`, `npm install`). Browsers get the direction wrong for such text:
 
-ParsiChin با استفاده از:
-- **تشخیص هوشمند متن فارسی** (نسبت حروف فارسی به کل حروف)،
-- **فونت وزیرمتن** (به‌صورت آفلاین، بدون هیچ درخواست شبکه)،
-- **`dir="rtl"` و `unicode-bidi: plaintext`** برای جهت صحیح هر بلوک،
-- **فاصله‌ی خط ۱٫۹ و هم‌ترازی راست** برای خوانایی متن فارسی،
-- **حفاظت از کدها/فرم‌ها/چت‌باکس‌ها** (همیشه LTR و دست‌نخورده)،
-- **MutationObserver** برای اعمال تغییرات در حین استریم پاسخ‌ها،
+* the paragraph is laid out **left-to-right** whenever the answer happens to *start* with a Latin word,
+* `unicode-bidi: plaintext` makes **each line choose its own direction** (Latin line left, Persian line right),
+* the wrong direction leaks from a flipped container into English paragraphs, moving punctuation to the wrong end,
+* Persian list bullets stay on the left while the text jumps right.
 
-متن‌ها را بدون خراب کردن صفحه اصلاح می‌کند.
+The result is the familiar zig-zag, uneven margins and words that appear to be missing.
 
-## نصب (حالت توسعه)
+## What ParsiChin does
 
-1. مخزن را کلون کنید.
-2. `bash scripts/check.sh` را اجرا کنید (بررسی syntax و فایل‌ها).
-3. در کروم به `chrome://extensions` بروید، **Developer mode** را روشن کنید.
-4. **Load unpacked** را بزنید و پوشه‌ی ریشه‌ی مخزن را انتخاب کنید.
-5. ChatGPT/Claude/Gemini را باز کنید؛ متن‌های فارسی باید راست‌چین و خوانا شوند.
+* **Content-based direction** — Persian letters are counted against Latin letters *and* real Persian words
+  are detected, so `API این سرویس ...` is Persian (RTL) even though it starts with a Latin token.
+  Direction is decided **once per block**, never per line, so streaming answers do not flip around.
+* **Explicit, cascade-proof styling** — the decision is written both as `dir="rtl|ltr"` and as the
+  `.pc-rtl` / `.pc-ltr` classes that carry `!important` rules, which survive chat UIs that hard-code
+  `direction: ltr` (and even `direction: ltr !important`) on message bodies.
+* **Containment** — English-only paragraphs inside a flipped container (e.g. DeepSeek's `.ds-markdown`)
+  are pinned back to LTR, so their punctuation and alignment stay correct.
+* **Persian typography** — bundled **Vazirmatn** (offline, no network request), line height 1.9,
+  right alignment, adjustable font size and weight.
+* **Lists done properly** — the list container is flipped with its items, so bullets sit next to the text.
+* **Safe by default** — code blocks, forms and chat inputs are never touched; numbers-only and code-only
+  blocks are left alone; disabling the extension restores the page exactly (including a `dir` attribute
+  the site had set itself).
+* **Live updates** — a `MutationObserver` decorates answers while they stream in.
+* **Two modes** — `auto` (only blocks that contain Persian) or `always` (every block of the conversation).
 
-برای بسته‌بندی: `bash scripts/build.sh` → خروجی در `dist/parsi-chin-vX.Y.Z.zip`.
+## Install (development)
 
-## ساختار پروژه
+1. Clone the repository.
+2. `bash scripts/check.sh` — validates JSON, JS syntax and required files.
+3. Open `chrome://extensions`, enable **Developer mode**.
+4. **Load unpacked** → select the repository root.
+5. Open ChatGPT/Claude/Gemini — Persian text is now RTL and readable.
+
+Package for the Web Store: `npm run build` → `dist/parsi-chin-v0.2.0.zip`.
+
+## Live RTL lab (no extension install needed)
+
+```bash
+npm run demo          # → http://localhost:8080/
+```
+
+The lab loads the **real** content script and stylesheet into a mock AI chat page, measures every probe in
+*your* browser (base direction, alignment, list markers, direction leaks, per-line flip-flop) and prints a
+PASS/FAIL table. Switch between:
+
+* **Before fix (v0.1.0 snapshot)** and **After fix (v0.2.0)** — the snapshot lives in `demo/legacy/`,
+* a **friendly** and a **hostile** site stylesheet (`direction: ltr !important`),
+* the **DeepSeek** container rule and the plain ChatGPT rule.
+
+![before vs after](docs/img/before-v0.1.0.png)
+
+## Project layout
 
 ```
 ParsiChin/
-├── manifest.json              # تنظیمات MV3، سایت‌های شناخته‌شده
-├── _locales/                  # ترجمه‌ها (fa / en)
+├── manifest.json              # MV3 config, supported hosts
+├── _locales/                  # extension strings (fa / en)
 ├── src/
-│   ├── shared/                # defaults، settings (chrome.storage)، i18n
-│   ├── background/            # service worker: تنظیمات، badge، اسکریپت‌های داینامیک
+│   ├── shared/                # defaults, settings (chrome.storage), i18n
+│   ├── background/            # service worker: settings, badge, dynamic scripts
 │   ├── content/
-│   │   ├── bidi.js            # تشخیص فارسی، نسبت حروف، جهت، علائم نگارشی
-│   │   ├── rules.js           # قواعد هر سایت (انتخابگر ریشه، دامنه‌ها)
-│   │   └── entry.js           # اسکن DOM، MutationObserver، اعمال/پاک‌سازی
-│   ├── popup/                 # پاپ‌آپ (فعال/غیرفعال + وضعیت سایت)
-│   └── options/               # تنظیمات کامل + پیش‌نمایش زنده
-├── styles/                    # CSS افزونه + فونت وزیرمتن (OFFL)
-├── assets/                    # آیکون‌ها + طرح اولیه
-├── scripts/                   # check.sh / build.sh
-└── tests/                     # smoke test با jsdom
+│   │   ├── bidi.js            # Persian detection, classification, direction
+│   │   ├── rules.js           # per-site rules (root selector, block selectors)
+│   │   └── entry.js           # DOM scan, MutationObserver, apply / cleanup
+│   ├── popup/                 # toolbar popup (on/off + site status)
+│   └── options/               # full options page with a live preview
+├── styles/                    # extension CSS + bundled Vazirmatn (OFL)
+├── demo/                      # RTL lab (English) + v0.1.0 snapshot in legacy/
+├── tools/
+│   ├── rtl-audit.js           # headless-Chromium audit of the real sources
+│   └── serve.js               # static server for the lab
+├── tests/                     # jsdom smoke + UI sanity tests
+├── docs/
+│   ├── rtl-audit.md           # root-cause audit and measurements
+│   ├── rtl-audit-before.json  # machine-readable report (v0.1.0)
+│   └── rtl-audit-after.json   # machine-readable report (v0.2.0)
+└── scripts/                   # check.sh / build.sh / ci-check.sh
 ```
 
-## سایت‌های پشتیبانی‌شده
+## Supported sites
 
-ChatGPT (chatgpt.com / chat.openai.com)، Claude، Gemini، Perplexity، DeepSeek، Microsoft Copilot، Le Chat (Mistral)، Hugging Face Chat.
+ChatGPT (`chatgpt.com`, `chat.openai.com`, `openai.com`), Claude, Gemini, Perplexity, DeepSeek,
+Microsoft Copilot, Le Chat (Mistral), Hugging Face Chat.
 
-سایت جدید اضافه کنید: در `manifest.json` الگوی URL و در `src/content/rules.js` یک قانون با `root` باثبات (`main` یا مشابه) ثبت کنید؛ سپس از تنظیمات، دامنه را در «سایت‌های دلخواه» هم وارد کنید.
+Adding a site: add the URL pattern to `content_scripts.matches` in `manifest.json` and an entry with a
+stable `root` selector to `src/content/rules.js`; then add the domain under *custom sites* in the options.
 
-## تنظیمات
+## Settings
 
-- **روش اعمال**: خودکار (فقط بلوک‌های فارسی) یا همیشه (همه‌ی بلوک‌های گفتگو)
-- **فونت**: وزیرمتن (آفلاین) یا فونت سایت
-- **اندازه‌ی متن / فاصله‌ی خطوط / ضخامت قلم**
-- **عادی‌سازی علائم نگارشی** (آزمایشی): `سلام, دنیا` → `سلام، دنیا`
-- **کدها همیشه LTR**، **غیرفعال‌سازی هر سایت**، **سایت‌های دلخواه**، **همه‌ی سایت‌ها** (با دسترسی اختیاری)
-- **پشتیبان‌گیری**: خروجی/ورودی JSON و بازنشانی به پیش‌فرض
+* **Apply mode** — automatic (Persian blocks only) or always (every block of the conversation)
+* **Font** — bundled Vazirmatn (offline) or the site's own font
+* **Font size / line height / weight**
+* **Punctuation normalization** (experimental): `سلام, دنیا` → `سلام، دنیا`
+* **Code stays LTR**, **disable a site**, **custom sites**, **all sites** (optional host permission)
+* **Backup** — JSON export/import and factory reset
 
-## توسعه
+## Development
 
 ```bash
-npm install        # فقط برای تست‌ها (jsdom)
-npm test           # تست هسته‌ی محتوا + پاپ‌آپ/تنظیمات (بدون مرورگر)
-npm run check      # بررسی JSON / JS / فایل‌ها
-npm run build      # ساخت zip
+npm install            # only for the tests (jsdom)
+npm test               # content-script tests + regression tests for every RTL defect
+npm run check          # JSON / JS syntax / required files
+npm run build          # dist/parsi-chin-v0.2.0.zip
+npm run demo           # RTL lab on http://localhost:8080/
+npm run audit:rtl      # headless-Chromium audit (needs playwright-core + Chromium)
 ```
 
-قواعد طراحی: بدون وابستگی runtime، بدون درخواست شبکه، بدون فریم‌ورک؛ اسکریپت‌ها classic و با namespace سراسری (`window.ParsiChin`). جزئیات در [CONTRIBUTING.md](CONTRIBUTING.md).
+Design rules: no runtime dependencies, no network requests, no framework; classic scripts on a global
+`window.ParsiChin` namespace. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## نقشه‌ی راه و کامیت‌ها
+## Known limitations
 
-فازبندی پیشنهادی **کامیت‌های کوچک** که خودتان بزنید در [ROADMAP.md](ROADMAP.md) آمده است. هر کامیت مستقل و قابل بازگشت است.
+* **Table columns** — cells are flipped individually; a fully RTL table would require reversing column
+  order, which breaks layout tables.
+* **Shadow DOM / iframes** — not scanned (`all_frames: false`; see ROADMAP phase 2).
+* **Persian comments inside code blocks** use the page's monospace font, which on some systems renders
+  Arabic script without joining (the bundled Vazirmatn is used as a last-resort fallback).
+* **Per-site roots** — a site that renames its `main`-like container needs a new rule entry.
 
-## مجوز
+## Roadmap and license
 
-کد: MIT — فونت وزیرمتن: SIL Open Font License (فایل `styles/fonts/LICENSE-OFL.txt`).
+Planned work and suggested commit-sized phases: [ROADMAP.md](ROADMAP.md).
+Changes in this release: [CHANGELOG.md](CHANGELOG.md) · suggested commit log: [COMMITS.txt](COMMITS.txt).
+
+Code: MIT · Vazirmatn font: SIL Open Font License (`styles/fonts/LICENSE-OFL.txt`).
