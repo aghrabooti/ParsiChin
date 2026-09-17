@@ -19,6 +19,22 @@
   const applyMode = params.get("mode") === "always" ? "always" : "auto";
   const fontFamily = params.get("font") === "system" ? "system" : "vazirmatn";
   const site = params.get("site") === "deepseek" ? "deepseek" : "chatgpt";
+  const noRoot = params.get("noroot") === "1";
+
+  /**
+   * Simulate a redesigned chat UI: same look, but <main> and #app are gone, so
+   * the per-site rule's scan root does not match and the extension has to fall
+   * back (this is the case that broke on the real DeepSeek).
+   */
+  if (noRoot) {
+    const main = document.querySelector("main.chat");
+    if (main) {
+      const shell = document.createElement("div");
+      shell.className = "chat-shell chat";
+      while (main.firstChild) shell.appendChild(main.firstChild);
+      main.parentNode.replaceChild(shell, main);
+    }
+  }
 
   document.getElementById("meta").textContent =
     `${engine === "before" ? "v0.1.0 (before fix)" : "v0.2.0 (after fix)"} · ` +
@@ -216,7 +232,13 @@
       row.verdict = problems.length ? "FAIL — " + problems.join("; ") : "pass";
       return row;
     });
-    window.parent.postMessage({ type: "parsichin-lab", engine, extOn, applyMode, site, rows }, "*");
+    const engineStats = (window.ParsiChin && window.ParsiChin.report)
+      ? window.ParsiChin.report().stats
+      : null;
+    window.parent.postMessage(
+      { type: "parsichin-lab", engine, extOn, applyMode, site, noRoot, rows, engineStats },
+      "*"
+    );
   }
 
   window.addEventListener("error", (e) => {
