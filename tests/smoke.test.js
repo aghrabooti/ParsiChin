@@ -33,7 +33,7 @@ async function main() {
         <p id="mixed">این جمله با کلمه‌ی Model و Prompt ترکیب شده است.</p>
         <p id="mostlyEn">This response is mostly English, but includes words like هوش مصنوعی and مدل.</p>
         <p id="punct">سلام, دنیا</p>
-        <p id="nativeRtl" dir="rtl">سایتی که خودش راست‌چین است</p>
+        <p id="nativeRtl" dir="rtl" style="direction: rtl; text-align: right">سایتی که خودش راست‌چین است</p>
         <pre id="code">const x = "سلام";</pre>
         <textarea id="ta">سلام</textarea>
         <div id="direct">متن مستقیم داخل دایو</div>
@@ -131,6 +131,19 @@ async function main() {
     "regression: Latin-heavy Persian prose is RTL, not the first-strong-char LTR");
   assert.ok(latinHeavy.classList.contains("pc-rtl"), "regression: rtl class drives the CSS");
 
+  /* ---------- regression: direction must survive site CSS ---------- */
+  const faStyle = fa.style;
+  assert.strictEqual(faStyle.getPropertyValue("direction"), "rtl",
+    "regression: decorated blocks carry an inline direction");
+  assert.strictEqual(faStyle.getPropertyPriority("direction"), "important",
+    "regression: the inline direction is !important so no site rule can win");
+  assert.strictEqual(faStyle.getPropertyPriority("text-align"), "important",
+    "regression: alignment is forced the same way");
+  assert.strictEqual(mostlyEn.style.getPropertyValue("direction"), "ltr",
+    "Latin-first blocks are forced LTR inline as well");
+  assert.strictEqual(mostlyEn.style.getPropertyPriority("direction"), "important",
+    "the inline LTR is !important too");
+
   const faList = window.document.getElementById("faList");
   assert.ok(faList.classList.contains("pc-list") && faList.classList.contains("pc-rtl"),
     "regression: the list container is flipped so bullets stay next to the text");
@@ -194,6 +207,15 @@ async function main() {
   assert.strictEqual(nativeRtl.getAttribute("dir"), "rtl",
     "site's own dir attribute restored after disable (bug: was stripped)");
   assert.ok(!en.classList.contains("pc-block"), "english block still untouched");
+  assert.strictEqual(faStyle.getPropertyValue("direction"), "",
+    "inline direction removed on disable");
+  assert.strictEqual(faStyle.getPropertyPriority("direction"), "",
+    "inline priority removed on disable");
+  const nativeInline = window.document.getElementById("nativeRtl").style;
+  assert.strictEqual(nativeInline.getPropertyValue("direction"), "rtl",
+    "an element the site styled itself keeps its own inline direction after cleanup");
+  assert.strictEqual(nativeInline.getPropertyPriority("direction"), "",
+    "…and we do not leave our !important behind on it");
 
   /* ---------- toggle ON again (the reported bug) ---------- */
   onStorage.forEach((cb) => cb({ parsiChinSettings: { newValue: full(true) } }, "local"));
@@ -268,9 +290,76 @@ async function testDeepSeekLayout() {
   console.log("✔ deepseek layout test passed — .ds-markdown container gets dir=rtl");
 }
 
+/**
+ * DeepSeek-like SPA whose rule root ("main, .ds-chat, #app") does NOT exist in
+ * the DOM — the case reported from a real browser: the base stylesheet applied
+ * (font changed) but nothing was ever decorated, so the direction never changed.
+ */
+async function testUnknownRoot() {
+  const html = `<!DOCTYPE html><html><body>
+    <div class="chat-shell">
+      <div class="message">
+        <div class="ds-markdown"><p id="md">سلام! این پاسخ فارسی است و باید راست‌چین شود.</p></div>
+      </div>
+      <div class="composer"><textarea id="box">پیام من</textarea></div>
+    </div>
+  </body></html>`;
+
+  const dom = new JSDOM(html, {
+    url: "https://chat.deepseek.com/a/chat/s/999",
+    runScripts: "outside-only",
+    pretendToBeVisual: true
+  });
+  const { window } = dom;
+  const store = {};
+  window.chrome = {
+    storage: {
+      local: {
+        get: async (k) => ({ [k]: store.parsiChinSettings }),
+        set: async (o) => { Object.assign(store, o); }
+      },
+      onChanged: { addListener: () => {} }
+    },
+    runtime: {
+      onMessage: { addListener: () => {} },
+      sendMessage: async () => ({}),
+      getManifest: () => ({ version: "0.2.0" })
+    }
+  };
+  for (const f of ["src/shared/defaults.js", "src/shared/settings.js", "src/content/bidi.js", "src/content/rules.js", "src/content/entry.js"]) {
+    window.eval(read(f));
+  }
+  await new Promise((r) => setTimeout(r, 90));
+
+  const md = window.document.getElementById("md");
+  assert.ok(md.classList.contains("pc-block"),
+    "regression: without the rule root, the scan falls back and still decorates");
+  assert.strictEqual(md.getAttribute("dir"), "rtl", "fallback scan sets dir=rtl");
+  assert.strictEqual(md.style.getPropertyValue("direction"), "rtl",
+    "fallback scan forces the inline direction");
+  assert.strictEqual(md.style.getPropertyPriority("direction"), "important",
+    "…with !important, so a site stylesheet cannot override it");
+
+  const box = window.document.getElementById("box");
+  assert.ok(!box.classList.contains("pc-block"), "the composer stays untouched");
+
+  /* diagnostics must explain the page */
+  const report = window.ParsiChin.report();
+  assert.strictEqual(report.host, "chat.deepseek.com", "report knows the host");
+  assert.strictEqual(report.ruleId, "deepseek", "report knows the site rule");
+  assert.ok(report.stats.blocks >= 1, "report counts the decorated blocks");
+  assert.ok(typeof report.stats.root === "string" && report.stats.root.length > 0,
+    "report names the scan root that was used");
+  assert.ok(Array.isArray(report.suspects), "report lists undecorated Persian blocks");
+  JSON.parse(window.ParsiChin.reportJson()); // must be valid JSON for bug reports
+
+  console.log("✔ unknown-root test passed — fallback scan decorates and reports");
+}
+
 (async function run() {
   await main();
   await testDeepSeekLayout();
+  await testUnknownRoot();
 })().catch((err) => {
   console.error("✘ smoke test failed");
   console.error(err);
