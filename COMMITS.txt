@@ -2,18 +2,18 @@ ParsiChin — commit log
 ==========================
 
 Base commit : 9f5fa71  (the commit this work started from)
-Head        : 6dc06db  chore: keep commit script current
-Commits     : 53
-Files       : 63 changed
+Head        : 2a45e42  docs: every site by default
+Commits     : 59
+Files       : 64 changed
 
 Every commit is pushed to the branch arena/01a0b0f4-parsichin (pull request #1) and the
 whole change set is also available as one patch that replays onto the base commit:
 
-  ParsiChin-v0.2.0.patch   built with: git format-patch --binary 9f5fa71..HEAD
+  ParsiChin-v0.2.1.patch   built with: git format-patch --binary 9f5fa71..HEAD
 
     git clone https://github.com/aghrabooti/ParsiChin.git && cd ParsiChin
     git checkout main && git checkout -b rtl-fix
-    git -c user.name=me -c user.email=me@example.com am --3way ../ParsiChin-v0.2.0.patch
+    git -c user.name=me -c user.email=me@example.com am --3way ../ParsiChin-v0.2.1.patch
 
 Prefer committing the changes yourself, under your own name, with short messages?
 The change set is grouped into six commits; run:
@@ -23,6 +23,12 @@ The change set is grouped into six commits; run:
 ------------------------------------------------------------------------------
 Applied commits (newest first)
 ------------------------------------------------------------------------------
+  2a45e42  2026-09-17 22:58  docs: every site by default
+  e0e19bc  2026-09-17 22:56  chore: v0.2.1
+  c10d18c  2026-09-17 22:56  test: default all sites
+  45a8ba8  2026-09-17 22:56  feat(popup): site on/off states
+  f23f7b8  2026-09-17 22:56  feat: all sites by default
+  cfa5ea7  2026-09-17 22:50  docs: refresh commit log
   6dc06db  2026-09-17 22:50  chore: keep commit script current
   4ea23e2  2026-09-17 22:50  chore: keep commit script current
   6262fb9  2026-09-17 22:50  docs: all sites
@@ -157,7 +163,7 @@ The same change set, grouped the way commit-all.sh commits it
       docs/store/store-2-lab.png
       docs/store/store-3-overview.png
 
-[6/6] git commit -m "chore: v0.2.0"
+[6/6] git commit -m "chore: v0.2.1"
 
   git add .gitignore package.json package-lock.json scripts/build.sh scripts/check.sh scripts/ci-check.sh scripts/store-check.sh
       .gitignore
@@ -177,7 +183,7 @@ Verify the result
 
   bash scripts/check.sh        # JSON + JavaScript syntax + required files
   npm test                     # smoke, UI sanity, permissions
-  npm run build                # dist/parsi-chin-v0.2.0.zip  -> load unpacked in chrome://extensions
+  npm run build                # dist/parsi-chin-v0.2.1.zip  -> load unpacked in chrome://extensions
   bash scripts/store-check.sh  # Chrome Web Store readiness (icons, listing, no remote code)
 
-  npm run audit:rtl -- --strict    # 136 probes in headless Chromium: expect 0 failing
+  npm run audit:rtl -- --strict    # 174 probes in headless Chromium: expect 0 failing
