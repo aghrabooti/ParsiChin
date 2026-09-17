@@ -363,9 +363,9 @@ async function testUnknownRoot() {
  * English page alone, and respect a per-site override.
  */
 async function testAllSites() {
-  async function boot(overrides, html) {
+  async function boot(overrides, html, url) {
     const dom = new JSDOM(html, {
-      url: "https://example.org/notes",
+      url: url || "https://example.org/notes",
       runScripts: "outside-only",
       pretendToBeVisual: true
     });
@@ -414,6 +414,18 @@ async function testAllSites() {
   assert.strictEqual(report.pageInScope, true, "all sites: the page reports itself in scope");
   assert.ok(report.stats.blocks >= 2, "all sites: blocks are counted");
 
+  /* 1b — with NO stored settings at all (fresh install) the default covers it too. */
+  const fresh = await boot({}, persianPage);
+  assert.strictEqual(fresh.document.getElementById("title").getAttribute("dir"), "rtl",
+    "a fresh install decorates an unknown host without any user action");
+  assert.strictEqual(fresh.ParsiChin.report().settings.allSites, true,
+    "the default for 'all sites' is on");
+
+  /* 1c — the same page with an explicit allSites:false stays untouched. */
+  win = await boot({ allSites: false }, persianPage);
+  assert.strictEqual(win.document.getElementById("title").getAttribute("dir"), null,
+    "allSites:false limits the extension to the built-in list again");
+
   /* 2 — the same page with "all sites" off stays untouched. */
   win = await boot({ allSites: false }, persianPage);
   assert.strictEqual(win.document.getElementById("title").getAttribute("dir"), null,
@@ -433,6 +445,19 @@ async function testAllSites() {
   win = await boot({ allSites: true }, englishPage);
   assert.strictEqual(win.ParsiChin.report().stats.blocks, 0,
     "a purely English page on an unknown host is left untouched");
+
+  /* 5 — documents we must never touch (the extension stores, PDFs, XML). */
+  const store = await boot({}, `<!DOCTYPE html><html><body>
+    <p>ParsiChin — افزودن به کروم</p></body></html>`, "https://chromewebstore.google.com/detail/x");
+  assert.strictEqual(store.document.querySelector("p").getAttribute("dir"), null,
+    "the Chrome Web Store is never decorated");
+  assert.strictEqual(store.ParsiChinSkipped, true, "the store page is marked as skipped");
+
+  /* 6 — the guard must not fire on ordinary pages. */
+  const normal = await boot({}, `<!DOCTYPE html><html><body><p id="t">سلام</p></body></html>`, "https://example.net/feed");
+  assert.strictEqual(normal.ParsiChinSkipped, undefined, "a normal page is not marked as skipped");
+  assert.strictEqual(normal.document.getElementById("t").getAttribute("dir"), "rtl",
+    "and it is decorated as usual");
 
   console.log("✔ all-sites test passed — unknown hosts work, English pages stay untouched");
 }

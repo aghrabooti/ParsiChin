@@ -1,5 +1,22 @@
 /**
- * ParsiChin — optional-permission regression test.
+ * ParsiChin — host-permission regression test.
+ *
+ * Since v0.2.1 the wildcard host pattern lives in `host_permissions`, so the
+ * extension works on every site the moment it is installed (that is what the
+ * user asked for). This test pins that arrangement down:
+ *
+ *   1. the manifest declares the wildcard for both host access and the content
+ *      script, and never the `<all_urls>` spelling;
+ *   2. the content script covers every http(s) page except the extension stores;
+ *   3. whatever pattern the UI asks Chrome for is declared, so the old
+ *      "Only permissions specified in the manifest may be requested" error
+ *      cannot come back;
+ *   4. "all sites" is the default in both settings copies.
+ *
+ * Historical note: the original bug was the options page requesting the literal
+ * `<all_urls>` while the manifest declared the wildcard host pattern. Chrome
+ * rejects any pattern the manifest does not declare, the rejection was
+ * unhandled, and "all sites" silently did nothing.
  *
  * Reproduces the reported bug:
  *
@@ -34,6 +51,7 @@ const MANIFEST = JSON.parse(read("manifest.json"));
 /* Chrome refuses patterns that are not declared in the manifest. */
 const DECLARED_OPTIONAL = new Set(
   []
+    .concat(MANIFEST.host_permissions || [])
     .concat(MANIFEST.optional_host_permissions || [])
     .concat(MANIFEST.optional_permissions || [])
 );
@@ -120,6 +138,30 @@ function loadOptionsPage(chromeApi) {
 const tick = (ms) => new Promise((r) => setTimeout(r, ms || 60));
 
 async function main() {
+  /* ---------- 0. the manifest declares wildcard access the right way ---------- */
+  assert.ok((MANIFEST.host_permissions || []).includes("*://*/*"),
+    "host_permissions must declare the wildcard pattern so the extension works on every site");
+  assert.ok(!JSON.stringify(MANIFEST).includes("<all_urls>"),
+    "the <all_urls> spelling must not appear anywhere in the manifest");
+
+  const cs = (MANIFEST.content_scripts || [])[0] || {};
+  assert.ok((cs.matches || []).includes("*://*/*"),
+    "the content script must run on every http(s) page");
+  const excludes = cs.exclude_matches || [];
+  for (const host of ["chromewebstore.google.com", "chrome.google.com", "addons.mozilla.org",
+                      "microsoftedge.microsoft.com"]) {
+    assert.ok(excludes.some((pattern) => pattern.includes(host)),
+      "the content script must stay out of " + host);
+  }
+  assert.deepStrictEqual(Object.keys(MANIFEST.icons || {}).sort(), ["128", "16", "48"],
+    "icons for the store listing are declared");
+
+  /* all-sites must be the default in both copies of the settings */
+  const defaults = read("src/shared/defaults.js");
+  const worker = read("src/background/service-worker.js");
+  assert.match(defaults, /allSites:\s*true/, "defaults.js: allSites defaults to true");
+  assert.match(worker, /allSites:\s*true/, "service worker defaults: allSites defaults to true");
+
   /* Collect unhandled rejections: the reported bug was exactly that. */
   const unhandled = [];
   const onUnhandled = (reason) => unhandled.push(String((reason && reason.message) || reason));
@@ -146,7 +188,7 @@ async function main() {
       assert.ok(DECLARED_OPTIONAL.has(origin) ||
         (origin === "<all_urls>" && ALL_URLS_EXPANSION.every((o) => DECLARED_OPTIONAL.has(o))),
         `permissions.${call.api}() asked for "${origin}", which manifest.json does not declare ` +
-        `(optional_host_permissions: ${JSON.stringify(MANIFEST.optional_host_permissions)}). ` +
+        `(host_permissions: ${JSON.stringify(MANIFEST.host_permissions)}). ` +
         "Chrome rejects that with 'Only permissions specified in the manifest may be requested'."
       );
     }
@@ -175,7 +217,7 @@ async function main() {
   assert.strictEqual(unhandled.length, 0, "denial must not produce unhandled rejections");
 
   process.off("unhandledRejection", onUnhandled);
-  console.log("✔ permissions test passed — optional host permission matches the manifest");
+  console.log("✔ permissions test passed — wildcard host access declared, every request declared, all sites on by default");
 }
 
 main().catch((err) => {

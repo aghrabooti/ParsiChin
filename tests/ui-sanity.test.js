@@ -108,6 +108,8 @@ async function main() {
 
   /* ---------- popup: one-click enable on any site ---------- */
   const anySiteChrome = makeChrome();
+  // all sites OFF: an unknown host must offer the one-click enable box
+  anySiteChrome.store.parsiChinSettings = { enabled: true, allSites: false };
   anySiteChrome.chrome.tabs.query = async () => [{ id: 42, url: "https://example.org/notes" }];
   anySiteChrome.chrome.tabs.sendMessage = async () => { throw new Error("Receiving end does not exist"); };
   const anySiteWindow = load(
@@ -127,7 +129,7 @@ async function main() {
   const enableMsg = anySiteChrome.sent.find((m) => m.type === "parsi-chin:enable-site");
   assert.ok(enableMsg && enableMsg.host === "example.org" && enableMsg.tabId === 42,
     "the background is asked to enable that host in that tab (no reload needed)");
-  assert.strictEqual(anySiteChrome.store.parsiChinSettings.allSites, undefined,
+  assert.strictEqual(anySiteChrome.store.parsiChinSettings.allSites, false,
     "per-site enable does not silently switch on all sites");
 
   anySiteWindow.document.getElementById("enableAll").click();
@@ -140,6 +142,42 @@ async function main() {
   /* a supported site must not show the box at all */
   assert.strictEqual(popupChrome.window.document.getElementById("enableBox").hidden, true,
     "a built-in site keeps the box hidden");
+
+  /* ---------- popup: default mode covers every site, no click needed ---------- */
+  const defaultChrome = makeChrome();          // no stored settings => defaults
+  assert.strictEqual(defaultChrome.store.parsiChinSettings.allSites, undefined,
+    "nothing stored yet in this stub");
+  defaultChrome.chrome.tabs.query = async () => [{ id: 43, url: "https://forum.example.org/t/1" }];
+  defaultChrome.chrome.tabs.sendMessage = async () => ({ blocks: 4, persian: 3, mixed: 1, pinnedLtr: 0, root: "body" });
+  const defaultWindow = load(
+    read("src/popup/popup.html"),
+    "src/popup/popup.js",
+    ["src/shared/defaults.js", "src/shared/settings.js", "src/content/rules.js", "src/shared/i18n.js"],
+    defaultChrome
+  );
+  await new Promise((r) => setTimeout(r, 80));
+  assert.strictEqual(defaultWindow.document.getElementById("enableBox").hidden, true,
+    "with the default settings no click is needed on an unknown host");
+  assert.match(defaultWindow.document.getElementById("siteDetail").textContent, /همه‌ی سایت‌ها/,
+    "the popup says that all sites are covered");
+
+  /* ---------- popup: a host the user switched off can be switched back on ---------- */
+  const offChrome = makeChrome();
+  offChrome.store.parsiChinSettings = { enabled: true, allSites: true, siteOverrides: { "example.org": false } };
+  offChrome.chrome.tabs.query = async () => [{ id: 44, url: "https://example.org/notes" }];
+  const offWindow = load(
+    read("src/popup/popup.html"),
+    "src/popup/popup.js",
+    ["src/shared/defaults.js", "src/shared/settings.js", "src/content/rules.js", "src/shared/i18n.js"],
+    offChrome
+  );
+  await new Promise((r) => setTimeout(r, 80));
+  assert.strictEqual(offWindow.document.getElementById("offBox").hidden, false,
+    "a host switched off in the options page offers to be switched back on");
+  offWindow.document.getElementById("turnOnSite").click();
+  await new Promise((r) => setTimeout(r, 60));
+  assert.ok(offChrome.sent.some((m) => m.type === "parsi-chin:toggle-site" && m.host === "example.org" && m.enabled === true),
+    "the background is asked to switch that host back on");
 
   /* ---------- options ---------- */
   const optChrome = makeChrome();

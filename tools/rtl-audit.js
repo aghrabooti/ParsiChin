@@ -236,9 +236,9 @@ const MEASURE = () => {
  * ------------------------------------------------------------------ */
 function judge(row, scenario) {
   const problems = [];
-  if (scenario && scenario.englishOnly) {
+  if (scenario && (scenario.englishOnly || scenario.expectUntouched)) {
     // Nothing Persian in the page: the extension must not have touched it.
-    if (row.dirAttr) problems.push("dir=" + row.dirAttr + " set on an English-only page");
+    if (row.dirAttr) problems.push("dir=" + row.dirAttr + " set on a page that must stay untouched");
     if (row.classes && /pc-/.test(row.classes)) problems.push("decorated: " + row.classes);
     return problems;
   }
@@ -270,6 +270,10 @@ const SCENARIOS = [
   { id: "site-css-ltr-important", host: "chatgpt.com", siteCss: ".markdown p, .markdown li, .markdown td, .markdown th, .markdown div, .markdown code { direction: ltr !important; text-align: left !important; }" },
   { id: "native-rtl-page", host: "chatgpt.com", nativeRtl: true, siteCss: ".markdown { direction: rtl; text-align: right; }" },
   // A host with no rule at all: this is what "all sites" mode has to handle.
+  // Default settings (nothing stored): "all sites" is on out of the box.
+  { id: "unknown-host-default", host: "example.com", noRoot: true },
+  // …and the same page with the mode switched off, which must stay untouched.
+  { id: "unknown-host-limited", host: "example.net", allSites: false, noRoot: true, expectUntouched: true },
   { id: "unknown-host-all-sites", host: "example.com", allSites: true, noRoot: true },
   // ...and an English-only page on such a host, which must stay untouched.
   { id: "unknown-host-english", host: "example.org", allSites: true, noRoot: true, englishOnly: true }
@@ -323,7 +327,9 @@ async function run() {
         },
         runtime: { onMessage: { addListener: () => {} }, sendMessage: async () => ({}), getURL: (p) => p }
       };
-    }, { allSites: !!scenario.allSites, applyMode: scenario.applyMode || "auto", fontFamily: "system" });
+    }, scenario.allSites === undefined
+      ? { applyMode: scenario.applyMode || "auto", fontFamily: "system" }   // shipped defaults
+      : { allSites: !!scenario.allSites, applyMode: scenario.applyMode || "auto", fontFamily: "system" });
     await page_.addStyleTag({ content: read("styles/parsi-chin.css") });
     for (const rel of SCRIPTS) await page_.addScriptTag({ content: read(rel) });
     await page_.waitForTimeout(250);
