@@ -73,10 +73,17 @@ const TEXT_ENGLISH = "The API returns a JSON payload with the model name.";
 /** Latin-heavy line followed by a Persian line inside ONE block. */
 const TEXT_ZIGZAG = TEXT_LATIN_LIST + "<br>" + TEXT_PERSIAN;
 
-function page(siteCss, noRoot) {
+/** Content for the "English-only page on an unknown host" scenario. */
+const ENGLISH_CONTENT = `
+  <p class="probe" id="en-1" data-flavor="rect" data-flip-safety="1">The API returns a JSON payload with the model name.</p>
+  <p class="probe" id="en-2" data-flavor="rect" data-flip-safety="1">Build 42 shipped on Tuesday.</p>
+  <p class="probe" id="en-3" data-flavor="rect" data-flip-safety="1">Release notes for the desktop client.</p>
+`;
+
+function page(siteCss, noRoot, englishOnly) {
   const open = noRoot ? '<div class="chat-shell"><article-shell>' : '<main class="chat"><article>';
   const close = noRoot ? '</article-shell></div>' : '</article></main>';
-  return `<!DOCTYPE html><html lang="en" dir="ltr"><head><meta charset="utf-8"><style>
+  const html = `<!DOCTYPE html><html lang="en" dir="ltr"><head><meta charset="utf-8"><style>
   * { box-sizing: border-box; }
   body { margin: 0; font: 16px/1.6 "DejaVu Sans", Arial, sans-serif; width: 780px; }
   main { padding: 20px; }
@@ -88,7 +95,7 @@ function page(siteCss, noRoot) {
   table { border-collapse: collapse; }
   th, td { border: 1px solid #ddd; padding: 4px 8px; }
   ${siteCss || ""}
-  </style></head><body>${open}<div class="markdown prose">
+  </style></head><body>${open}<div class="markdown prose"><!--PC_CONTENT_START-->
 
   <p class="probe" id="fa-pure" data-flavor="sen" data-expect="rtl"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>${TEXT_PERSIAN}</p>
 
@@ -130,7 +137,12 @@ function page(siteCss, noRoot) {
 
   <p class="probe" id="fa-hostile" data-flavor="sen" data-expect="rtl" style="direction:ltr"><bdi class="s-fa">فارسی</bdi><bdi class="s-la">Z</bdi>${TEXT_PERSIAN}</p>
 
-  </div>${close}</body></html>`;
+  </div><!--PC_CONTENT_END-->${close}</body></html>`;
+
+  // The English-only scenario keeps the same layout but no Persian at all.
+  return englishOnly
+    ? html.replace(/<!--PC_CONTENT_START-->[\s\S]*<!--PC_CONTENT_END-->/, ENGLISH_CONTENT)
+    : html;
 }
 
 /* ------------------------------------------------------------------ *
@@ -224,6 +236,12 @@ const MEASURE = () => {
  * ------------------------------------------------------------------ */
 function judge(row, scenario) {
   const problems = [];
+  if (scenario && (scenario.englishOnly || scenario.expectUntouched)) {
+    // Nothing Persian in the page: the extension must not have touched it.
+    if (row.dirAttr) problems.push("dir=" + row.dirAttr + " set on a page that must stay untouched");
+    if (row.classes && /pc-/.test(row.classes)) problems.push("decorated: " + row.classes);
+    return problems;
+  }
   // On a natively-RTL page the site itself decides the direction of English
   // text; the extension is only required not to make things worse.
   if (row.flipSafety && scenario && scenario.nativeRtl) return problems;
@@ -250,7 +268,15 @@ const SCENARIOS = [
   { id: "missing-root", host: "chat.deepseek.com", noRoot: true },
   { id: "site-css-ltr", host: "chatgpt.com", siteCss: ".markdown, .markdown p, .markdown li, .markdown td, .markdown th, .markdown div { direction: ltr; }" },
   { id: "site-css-ltr-important", host: "chatgpt.com", siteCss: ".markdown p, .markdown li, .markdown td, .markdown th, .markdown div, .markdown code { direction: ltr !important; text-align: left !important; }" },
-  { id: "native-rtl-page", host: "chatgpt.com", nativeRtl: true, siteCss: ".markdown { direction: rtl; text-align: right; }" }
+  { id: "native-rtl-page", host: "chatgpt.com", nativeRtl: true, siteCss: ".markdown { direction: rtl; text-align: right; }" },
+  // A host with no rule at all: this is what "all sites" mode has to handle.
+  // Default settings (nothing stored): "all sites" is on out of the box.
+  { id: "unknown-host-default", host: "example.com", noRoot: true },
+  // …and the same page with the mode switched off, which must stay untouched.
+  { id: "unknown-host-limited", host: "example.net", allSites: false, noRoot: true, expectUntouched: true },
+  { id: "unknown-host-all-sites", host: "example.com", allSites: true, noRoot: true },
+  // ...and an English-only page on such a host, which must stay untouched.
+  { id: "unknown-host-english", host: "example.org", allSites: true, noRoot: true, englishOnly: true }
 ];
 
 async function run() {
@@ -286,11 +312,11 @@ async function run() {
     const errors = [];
     page_.on("pageerror", (e) => errors.push(String(e)));
     await page_.route("https://" + scenario.host + "/**", (route) =>
-      route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: page(scenario.siteCss, scenario.noRoot) }));
+      route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: page(scenario.siteCss, scenario.noRoot, scenario.englishOnly) }));
     await page_.goto("https://" + scenario.host + "/c/rtl-audit");
 
-    await page_.evaluate(() => {
-      window.__pcSettings = {};
+    await page_.evaluate((initialSettings) => {
+      window.__pcSettings = initialSettings;
       window.chrome = {
         storage: {
           local: {
@@ -301,7 +327,9 @@ async function run() {
         },
         runtime: { onMessage: { addListener: () => {} }, sendMessage: async () => ({}), getURL: (p) => p }
       };
-    });
+    }, scenario.allSites === undefined
+      ? { applyMode: scenario.applyMode || "auto", fontFamily: "system" }   // shipped defaults
+      : { allSites: !!scenario.allSites, applyMode: scenario.applyMode || "auto", fontFamily: "system" });
     await page_.addStyleTag({ content: read("styles/parsi-chin.css") });
     for (const rel of SCRIPTS) await page_.addScriptTag({ content: read(rel) });
     await page_.waitForTimeout(250);

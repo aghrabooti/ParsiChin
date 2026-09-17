@@ -356,10 +356,117 @@ async function testUnknownRoot() {
   console.log("✔ unknown-root test passed — fallback scan decorates and reports");
 }
 
+
+/**
+ * "Works on every site": a host that is NOT in rules.js, with the "all sites"
+ * setting on. The extension must decorate Persian blocks, leave a purely
+ * English page alone, and respect a per-site override.
+ */
+async function testAllSites() {
+  async function boot(overrides, html, url) {
+    const dom = new JSDOM(html, {
+      url: url || "https://example.org/notes",
+      runScripts: "outside-only",
+      pretendToBeVisual: true
+    });
+    const { window } = dom;
+    const store = { parsiChinSettings: Object.assign({
+      enabled: true, applyMode: "auto", fontFamily: "system", fontSize: 100
+    }, overrides) };
+    window.chrome = {
+      storage: {
+        local: {
+          get: async () => ({ parsiChinSettings: store.parsiChinSettings }),
+          set: async (o) => { Object.assign(store, o); }
+        },
+        onChanged: { addListener: () => {} }
+      },
+      runtime: {
+        onMessage: { addListener: () => {} },
+        sendMessage: async () => ({}),
+        getManifest: () => ({ version: "0.2.0" })
+      }
+    };
+    for (const f of ["src/shared/defaults.js", "src/shared/settings.js", "src/content/bidi.js", "src/content/rules.js", "src/content/entry.js"]) {
+      window.eval(read(f));
+    }
+    await new Promise((r) => setTimeout(r, 90));
+    return window;
+  }
+
+  const persianPage = `<!DOCTYPE html><html><body>
+    <div class="article">
+      <h1 id="title">نکته‌های کار با React</h1>
+      <p id="body">این یک پاراگراف فارسی است که باید از سمت راست خوانده شود.</p>
+      <p id="english">The build pipeline runs on CI.</p>
+    </div>
+  </body></html>`;
+
+  /* 1 — an unknown host with "all sites" on gets decorated, no rule needed. */
+  let win = await boot({ allSites: true }, persianPage);
+  assert.strictEqual(win.document.getElementById("title").getAttribute("dir"), "rtl",
+    "all sites: Persian heading on an unknown host is right-to-left");
+  assert.strictEqual(win.document.getElementById("body").style.getPropertyPriority("direction"), "important",
+    "all sites: the forced inline direction is applied there too");
+  assert.ok(!win.document.getElementById("english").classList.contains("pc-rtl"),
+    "all sites: the English paragraph is not flipped");
+  const report = win.ParsiChin.report();
+  assert.strictEqual(report.pageInScope, true, "all sites: the page reports itself in scope");
+  assert.ok(report.stats.blocks >= 2, "all sites: blocks are counted");
+
+  /* 1b — with NO stored settings at all (fresh install) the default covers it too. */
+  const fresh = await boot({}, persianPage);
+  assert.strictEqual(fresh.document.getElementById("title").getAttribute("dir"), "rtl",
+    "a fresh install decorates an unknown host without any user action");
+  assert.strictEqual(fresh.ParsiChin.report().settings.allSites, true,
+    "the default for 'all sites' is on");
+
+  /* 1c — the same page with an explicit allSites:false stays untouched. */
+  win = await boot({ allSites: false }, persianPage);
+  assert.strictEqual(win.document.getElementById("title").getAttribute("dir"), null,
+    "allSites:false limits the extension to the built-in list again");
+
+  /* 2 — the same page with "all sites" off stays untouched. */
+  win = await boot({ allSites: false }, persianPage);
+  assert.strictEqual(win.document.getElementById("title").getAttribute("dir"), null,
+    "all sites off: an unknown host is left alone");
+  assert.strictEqual(win.ParsiChin.report().stats.blocks, 0, "all sites off: nothing decorated");
+
+  /* 3 — a per-site override wins over "all sites". */
+  win = await boot({ allSites: true, siteOverrides: { "example.org": false } }, persianPage);
+  assert.strictEqual(win.document.getElementById("title").getAttribute("dir"), null,
+    "an explicit per-site off-switch wins over all sites mode");
+  assert.strictEqual(win.ParsiChin.report().blockedByOverride, true, "the report names the override");
+
+  /* 4 — a page with no Persian at all is skipped quickly and left alone. */
+  const englishPage = `<!DOCTYPE html><html><body>
+    <main><h1>Release notes</h1><p>The API returns JSON.</p><p>Build 42 shipped.</p></main>
+  </body></html>`;
+  win = await boot({ allSites: true }, englishPage);
+  assert.strictEqual(win.ParsiChin.report().stats.blocks, 0,
+    "a purely English page on an unknown host is left untouched");
+
+  /* 5 — documents we must never touch (the extension stores, PDFs, XML). */
+  const store = await boot({}, `<!DOCTYPE html><html><body>
+    <p>ParsiChin — افزودن به کروم</p></body></html>`, "https://chromewebstore.google.com/detail/x");
+  assert.strictEqual(store.document.querySelector("p").getAttribute("dir"), null,
+    "the Chrome Web Store is never decorated");
+  assert.strictEqual(store.ParsiChinSkipped, true, "the store page is marked as skipped");
+
+  /* 6 — the guard must not fire on ordinary pages. */
+  const normal = await boot({}, `<!DOCTYPE html><html><body><p id="t">سلام</p></body></html>`, "https://example.net/feed");
+  assert.strictEqual(normal.ParsiChinSkipped, undefined, "a normal page is not marked as skipped");
+  assert.strictEqual(normal.document.getElementById("t").getAttribute("dir"), "rtl",
+    "and it is decorated as usual");
+
+  console.log("✔ all-sites test passed — unknown hosts work, English pages stay untouched");
+}
+
 (async function run() {
   await main();
   await testDeepSeekLayout();
   await testUnknownRoot();
+  await testAllSites();
 })().catch((err) => {
   console.error("✘ smoke test failed");
   console.error(err);
