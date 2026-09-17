@@ -35,7 +35,7 @@ git add demo/chat-boot.js demo/chat.html demo/demo-chat.css demo/demo-lab.css de
 git commit -m "feat: rtl lab"
 
 # --------------------------------------------- 5) docs, audit report, screenshots
-git add CHANGELOG.md COMMANDS.md COMMITS.txt CONTRIBUTING.md README.md ROADMAP.md STORE.md PRIVACY.md commit-all.sh docs
+git add CHANGELOG.md COMMANDS.md COMMITS.txt CONTRIBUTING.md README.md ROADMAP.md STORE.md PRIVACY.md INSTALL.md commit-all.sh docs
 git commit -m "docs: rtl report"
 
 # --------------------------------------------- 6) release v0.2.0
