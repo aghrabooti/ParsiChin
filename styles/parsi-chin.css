@@ -1,8 +1,21 @@
 /* ==========================================================================
    ParsiChin — content stylesheet
    Applies only when `html.parsi-chin-active` is present (set by entry.js).
-   Scoped entirely under .parsi-chin-active / .pc-block so the extension is a
+   Scoped entirely under .parsi-chin-active / .pc-* so the extension is a
    no-op on non-target pages.
+
+   Direction model
+   ---------------
+   entry.js decides ONE direction per block (from content statistics, never
+   from `dir="auto"`'s first-strong-character rule) and writes it twice:
+
+     - `dir="rtl"` / `dir="ltr"` on the element        (semantics, a11y)
+     - `.pc-rtl` / `.pc-ltr`                           (this stylesheet)
+
+   The CSS below is the part that actually wins: the `dir` attribute is only a
+   presentational hint, while these declarations are `!important` author rules
+   with enough specificity to survive chat UIs that hard-code
+   `direction: ltr` (and even `direction: ltr !important`) on message bodies.
    ========================================================================== */
 
 /* The bundled Vazirmatn faces are loaded by entry.js with
@@ -22,34 +35,76 @@ html.parsi-chin-active.pc-font-vazirmatn .pc-block {
   font-family: var(--pc-font);
 }
 
+/* ---------- Direction: the single source of truth ---------- */
+
+/* Persian-first blocks: RTL + right aligned. */
+html.parsi-chin-active .pc-block.pc-rtl,
+html.parsi-chin-active .pc-rtl {
+  direction: rtl !important;
+  text-align: right !important;
+}
+
+/* Latin-first blocks (and English content pinned inside an RTL block):
+   explicit LTR + left alignment, so a Persian neighbour cannot drag them. */
+html.parsi-chin-active .pc-block.pc-ltr,
+html.parsi-chin-active .pc-ltr {
+  direction: ltr !important;
+  text-align: left !important;
+}
+
+/* The `dir` attribute must never be the weakest link in the cascade.
+   (Kept for engines/pages that read the attribute instead of the class.) */
+html.parsi-chin-active [dir="rtl"].pc-block,
+html.parsi-chin-active [dir="rtl"].pc-rtl {
+  direction: rtl !important;
+}
+html.parsi-chin-active [dir="ltr"].pc-block,
+html.parsi-chin-active [dir="ltr"].pc-ltr {
+  direction: ltr !important;
+}
+
 /* ---------- Decorated text blocks ---------- */
-.parsi-chin-active .pc-block {
+
+html.parsi-chin-active .pc-block {
   font-size: var(--pc-font-size);
   font-weight: var(--pc-font-weight);
   line-height: var(--pc-line-height);
   letter-spacing: normal;
   word-spacing: normal;
   overflow-wrap: break-word;
-  text-align: start;
 }
 
-/* Persian-first paragraphs: force RTL + right alignment. */
-.parsi-chin-active .pc-block.pc-persian {
-  /* Chat UIs frequently set direction/text-align on message wrappers.
-     These must win for a block the extension explicitly classified as RTL. */
+/* ---------- Lists ---------- */
+
+/* Flipping only the <li> items keeps the bullets on the left while the text
+   jumps to the right. The list container must be flipped with them, and the
+   marker indentation has to move to the inline-start edge. */
+html.parsi-chin-active ul.pc-list.pc-rtl,
+html.parsi-chin-active ol.pc-list.pc-rtl {
   direction: rtl !important;
   text-align: right !important;
+  padding-inline-start: 1.6em !important;
+  padding-inline-end: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 1.6em !important;
 }
 
-/* Truly mixed / mostly-Latin blocks: let the browser resolve direction
-   per paragraph from the first strong character. */
-.parsi-chin-active .pc-block.pc-mixed {
-  unicode-bidi: plaintext !important;
-  text-align: start !important;
+html.parsi-chin-active ul.pc-list.pc-ltr,
+html.parsi-chin-active ol.pc-list.pc-ltr {
+  direction: ltr !important;
+  text-align: left !important;
+  padding-inline-start: 1.6em !important;
+  padding-inline-end: 0 !important;
+  padding-left: 1.6em !important;
+  padding-right: 0 !important;
+}
+
+html.parsi-chin-active .pc-list > li {
+  text-align: inherit;
 }
 
 /* Children should follow the block's font metrics. */
-.parsi-chin-active .pc-block :is(p, span, a, em, strong, li, h1, h2, h3, h4, h5, h6, td, th, blockquote) {
+html.parsi-chin-active .pc-block :is(p, span, a, em, strong, li, h1, h2, h3, h4, h5, h6, td, th, blockquote) {
   line-height: inherit;
 }
 
@@ -57,17 +112,28 @@ html.parsi-chin-active.pc-font-vazirmatn .pc-block {
 html.parsi-chin-active.pc-code-ltr .pc-block pre,
 html.parsi-chin-active.pc-code-ltr .pc-block code,
 html.parsi-chin-active.pc-code-ltr .pc-block kbd,
+html.parsi-chin-active.pc-code-ltr .pc-block samp,
 html.parsi-chin-active.pc-code-ltr pre,
 html.parsi-chin-active.pc-code-ltr code {
   direction: ltr !important;
   text-align: left !important;
   unicode-bidi: isolate;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace !important;
+  /* The bundled Persian font is a last-resort fallback for systems whose
+     monospace font has no Arabic glyphs (otherwise Persian comments inside
+     code blocks show as tofu boxes). */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono",
+    "ParsiChin Vazirmatn", Vazirmatn, monospace !important;
   line-height: 1.6 !important;
 }
 
+/* Inline code must flow with its sentence, but long code runs inside an RTL
+   paragraph still need an LTR base, which the rule above provides. */
+html.parsi-chin-active.pc-code-ltr .pc-block :not(pre) > code {
+  unicode-bidi: isolate;
+}
+
 /* Keep headings readable and pleasant. */
-.parsi-chin-active .pc-block :is(h1, h2, h3, h4, h5, h6) {
+html.parsi-chin-active .pc-block :is(h1, h2, h3, h4, h5, h6) {
   line-height: 1.7;
   font-weight: 700;
 }
