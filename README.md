@@ -3,7 +3,7 @@
 A Chrome extension (Manifest V3) that makes **mixed Persian/English answers readable** on AI chat pages —
 ChatGPT, Claude, Gemini, Perplexity, DeepSeek, Microsoft Copilot, Le Chat (Mistral) and Hugging Face Chat.
 
-> **v0.2.0 — RTL engine rewrite.** The previous version delegated direction to `dir="auto"` and
+> **v0.2.1 — every site by default.** The wildcard host access now lives in `host_permissions` and the content script matches every http(s) page, so Persian text is fixed everywhere right after installation (switchable off per site or globally). The v0.2.0 release was the RTL engine rewrite. The previous version delegated direction to `dir="auto"` and
 > `unicode-bidi: plaintext`, which silently rendered Persian paragraphs left-to-right and flipped the
 > layout line by line. The full audit (root causes + measurements) is in
 > **[docs/rtl-audit.md](docs/rtl-audit.md)**. Same 95-probe fixture in headless Chromium:
@@ -37,6 +37,12 @@ The result is the familiar zig-zag, uneven margins and words that appear to be m
 * **Safe by default** — code blocks, forms and chat inputs are never touched; numbers-only and code-only
   blocks are left alone; disabling the extension restores the page exactly (including a `dir` attribute
   the site had set itself).
+* **Works on every site out of the box.** The content script runs on every http(s) page, so Persian
+  text is fixed everywhere without enabling anything per site. Turn "all sites" off in the options
+  page to limit the extension to the built-in AI chat list, exclude single hosts from the site list,
+  or use the popup to switch one site back on or off. On pages that are not in the list (with the mode
+  off) the popup offers a one-click **Enable on this site** that injects the script immediately — no
+  reload needed.
 * **Keeps working when a site is redesigned** — if the known container is gone, the scan falls
   back to generic containers and finally to `<body>`, instead of silently doing nothing.
 * **Diagnostics** — `ParsiChin.reportJson()` in the page console explains what happened on the
@@ -53,7 +59,7 @@ The result is the familiar zig-zag, uneven margins and words that appear to be m
 4. **Load unpacked** → select the repository root.
 5. Open ChatGPT/Claude/Gemini — Persian text is now RTL and readable.
 
-Package for the Web Store: `npm run build` → `dist/parsi-chin-v0.2.0.zip`.
+Package for the Web Store: `npm run build` → `dist/parsi-chin-v0.2.1.zip`.
 
 ## Live RTL lab (no extension install needed)
 
@@ -65,7 +71,7 @@ The lab loads the **real** content script and stylesheet into a mock AI chat pag
 *your* browser (base direction, alignment, list markers, direction leaks, per-line flip-flop) and prints a
 PASS/FAIL table. Switch between:
 
-* **Before fix (v0.1.0 snapshot)** and **After fix (v0.2.0)** — the snapshot lives in `demo/legacy/`,
+* **Before fix (v0.1.0 snapshot)** and **After fix (v0.2.1)** — the snapshot lives in `demo/legacy/`,
 * a **friendly** and a **hostile** site stylesheet (`direction: ltr !important`),
 * the **DeepSeek** container rule and the plain ChatGPT rule.
 
@@ -95,7 +101,7 @@ ParsiChin/
 ├── docs/
 │   ├── rtl-audit.md           # root-cause audit and measurements
 │   ├── rtl-audit-before.json  # machine-readable report (v0.1.0)
-│   └── rtl-audit-after.json   # machine-readable report (v0.2.0)
+│   └── rtl-audit-after.json   # machine-readable report (v0.2.1)
 └── scripts/                   # check.sh / build.sh / ci-check.sh
 ```
 
@@ -122,7 +128,7 @@ stable `root` selector to `src/content/rules.js`; then add the domain under *cus
 npm install            # only for the tests (jsdom)
 npm test               # content-script tests + regression tests for every RTL defect
 npm run check          # JSON / JS syntax / required files
-npm run build          # dist/parsi-chin-v0.2.0.zip
+npm run build          # dist/parsi-chin-v0.2.1.zip
 npm run demo           # RTL lab on http://localhost:8080/
 npm run audit:rtl      # headless-Chromium audit (needs playwright-core + Chromium)
 ```

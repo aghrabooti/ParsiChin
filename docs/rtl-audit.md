@@ -5,16 +5,29 @@ and readable. This document is the audit that explains why the RTL behaviour was
 *visibly wrong* on real pages even though the unit tests were green, what changed
 in v0.2.0, and how to verify it yourself in a real browser.
 
-**Headline result** — same fixture, same Chromium build, same 95 probes:
+**Headline result** — same fixture, same Chromium build:
 
 | build | probes | failing |
 | --- | --- | --- |
-| v0.1.0 (`HEAD`) | 95 | **22** |
-| v0.2.0 (fixed) | 95 | **0** |
-| after the "font changes but not the direction" report | 114 | **0** |
+| v0.1.0 (`HEAD`) | 174 | **61** |
+| v0.2.x (fixed) | 174 | **0** |
 
-The `missing-root` scenario added for that report fails **13 of 19 probes** with the code as it
-was before the fix and **0** after it.
+(95 probes were measured before the `missing-root` scenario was added: 22 failing then, 0 after.)
+
+The `missing-root` scenario added for the "font changes but not the direction" report fails
+**13 of 19 probes** with the code as it was before the fix and **0** after it.
+
+The browser lab at `/demo/` measures the same thing in 22 probes, and adds the reporter's own
+case — the user's *sent message*:
+
+| lab configuration | probes passing |
+| --- | --- |
+| v0.2.0, normal page | **22/22** |
+| v0.2.0, redesigned page (no `<main>`, no `#app`) | **22/22** |
+| v0.2.0, hostile site CSS (`direction: ltr !important`) | **22/22** |
+| v0.1.0 snapshot, normal page | 15/22 |
+| v0.1.0 snapshot, redesigned page | 7/22 |
+| extension switched off | 7/22 |
 
 Raw reports: [`rtl-audit-before.json`](rtl-audit-before.json),
 [`rtl-audit-after.json`](rtl-audit-after.json).
@@ -38,6 +51,10 @@ scenarios:
 | `site-css-ltr` | site hard-codes `direction: ltr` on message bodies |
 | `site-css-ltr-important` | site hard-codes `direction: ltr !important` |
 | `missing-root` | the rule's container does not exist (no `<main>`, no `#app`) — the shape of DeepSeek's current build |
+| `unknown-host-default` | a host with no rule at all with **nothing stored** — i.e. the shipped default, which must already fix the page (13 of 19 probes failed with the v0.1.0 sources, 0 now) |
+| `unknown-host-all-sites` | the same, with "all sites" explicit |
+| `unknown-host-limited` | the same page with "all sites" off: nothing may be decorated |
+| `unknown-host-english` | the same kind of host with an English-only page: nothing may be decorated |
 | `native-rtl-page` | a page that is already RTL |
 
 Each probe is measured two ways so the result cannot be argued with:
@@ -185,7 +202,7 @@ For the extension itself:
 ```bash
 npm test                 # jsdom unit + regression tests
 npm run check            # JSON / JS syntax / required files
-npm run build            # dist/parsi-chin-v0.2.0.zip
+npm run build            # dist/parsi-chin-v0.2.1.zip
 ```
 
 ---
@@ -222,7 +239,9 @@ ParsiChin.reportJson()   // settings, scan root, decorated count, undecorated Pe
 
 The popup shows the decorated block count of the active tab for the same reason. The lab has a
 **Container → "redesigned (no `<main>`)"** switch that reproduces the situation: the v0.1.0
-snapshot scores 7/20, the fixed build 20/20 with `root=div.chat-shell.chat`.
+snapshot scores 7/22, the fixed build 22/22 with `root=div.chat-shell.chat`. The mock chat also
+contains the user's own message bubble (two probes, `own-message` / `own-message-2`) — the exact
+case from the report — and it passes with the hostile stylesheet active.
 
 ## 6. Known limitations (unchanged by this fix)
 

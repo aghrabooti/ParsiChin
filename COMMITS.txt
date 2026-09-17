@@ -1,26 +1,58 @@
-ParsiChin v0.2.0 — commit log
+ParsiChin — commit log
 ==========================
 
-Base commit : 9f5fa71  test(smoke): enhance smoke tests for DeepSeek layout and Persian text handling
-Head        : 39b52a8
-Commits     : 31
-Files       : 46 changed
+Base commit : 9f5fa71  (the commit this work started from)
+Head        : 5dc78db  docs: store screenshots
+Commits     : 61
+Files       : 65 changed
 
-Everything is pushed to the branch arena/01a0b0f4-parsichin (PR #1) and is also
-available as a patch that replays the whole change set onto main:
+Every commit is pushed to the branch arena/01a0b0f4-parsichin (pull request #1) and the
+whole change set is also available as one patch that replays onto the base commit:
 
-  ParsiChin-v0.2.0.patch     git format-patch --binary --output ... 9f5fa71..HEAD
-      git clone https://github.com/aghrabooti/ParsiChin.git && cd ParsiChin
-      git checkout main && git checkout -b rtl-fix
-      git -c user.name=me -c user.email=me@example.com am --3way ../ParsiChin-v0.2.0.patch
+  ParsiChin-v0.2.1.patch   built with: git format-patch --binary 9f5fa71..HEAD
 
-Or group the changes into seven short commits under your own name:
+    git clone https://github.com/aghrabooti/ParsiChin.git && cd ParsiChin
+    git checkout main && git checkout -b rtl-fix
+    git -c user.name=me -c user.email=me@example.com am --3way ../ParsiChin-v0.2.1.patch
 
-  bash commit-all.sh     # then: git push -u origin HEAD
+Prefer committing the changes yourself, under your own name, with short messages?
+The change set is grouped into six commits; run:
 
---------------------------------------------------------------------------
+    bash commit-all.sh        # then: git push -u origin HEAD
+
+------------------------------------------------------------------------------
 Applied commits (newest first)
---------------------------------------------------------------------------
+------------------------------------------------------------------------------
+  5dc78db  2026-09-17 22:58  docs: store screenshots
+  6cd3bd4  2026-09-17 22:58  docs: refresh commit log
+  2a45e42  2026-09-17 22:58  docs: every site by default
+  e0e19bc  2026-09-17 22:56  chore: v0.2.1
+  c10d18c  2026-09-17 22:56  test: default all sites
+  45a8ba8  2026-09-17 22:56  feat(popup): site on/off states
+  f23f7b8  2026-09-17 22:56  feat: all sites by default
+  cfa5ea7  2026-09-17 22:50  docs: refresh commit log
+  6dc06db  2026-09-17 22:50  chore: keep commit script current
+  4ea23e2  2026-09-17 22:50  chore: keep commit script current
+  6262fb9  2026-09-17 22:50  docs: all sites
+  5f4f41b  2026-09-17 22:50  test: all sites
+  fcfa8ec  2026-09-17 22:50  feat(popup): enable on this site
+  9cd203c  2026-09-17 22:50  fix: any site support
+  c0b06fd  2026-09-17 21:35  docs: refresh commit log
+  530b38f  2026-09-17 21:35  chore: keep commit script current
+  7e5e9bb  2026-09-17 21:35  docs: free install guide
+  6f674e0  2026-09-17 21:33  docs: refresh commit log
+  100afc9  2026-09-17 21:33  chore: keep commit script current
+  ecde657  2026-09-17 21:33  feat(server): store links
+  78207a6  2026-09-17 21:33  feat(tools): store assets
+  5f8204d  2026-09-17 21:33  docs: store guide
+  cf90f99  2026-09-17 21:25  docs: refresh commit log
+  4d9fd19  2026-09-17 21:25  chore: keep commit script current
+  682611a  2026-09-17 21:25  docs: refresh numbers
+  5fe5c5d  2026-09-17 21:25  test: server pages
+  28d7813  2026-09-17 21:25  feat(demo): new lab design
+  42125fc  2026-09-17 21:25  feat(server): designed pages
+  0a98957  2026-09-17 21:18  chore: keep commit script current
+  30c9c44  2026-09-17 21:18  docs: refresh commit log
   39b52a8  2026-09-17 21:18  docs: diagnose rtl
   7690a1a  2026-09-17 21:18  feat(demo): no-main switch
   46c508d  2026-09-17 21:18  test: missing root case
@@ -53,119 +85,109 @@ Applied commits (newest first)
   0d58b86  2026-09-17 20:14  test(rtl): add a headless-browser audit and regression tests
   ebe6ac0  2026-09-17 20:14  fix(rtl): decide one direction per block from content, not dir=auto
 
-  (the newest commit only refreshes this file, so it may list itself as missing)
-
---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 The same change set, grouped the way commit-all.sh commits it
---------------------------------------------------------------------------
+------------------------------------------------------------------------------
 
-COMMIT 1/7 — fix: optional host permission
-Files:
-  src/options/options.js
-  src/background/service-worker.js
-  src/shared/defaults.js
-  manifest.json
-Command:
-  git add src/options/options.js src/background/service-worker.js src/shared/defaults.js manifest.json
-  git commit -m "fix: optional host permission"
-Changes:
-  The options page requested the literal <all_urls> pattern while manifest.json declares the
-  wildcard host pattern, so Chrome answered "Only permissions specified in the manifest may be
-  requested" (an unhandled promise rejection) and the permission never became granted.
-  The service worker checked the same wrong pattern, so "all sites" and custom-site injection
-  silently did nothing.
-    * one pattern constant per context (ALL_ORIGINS = ["*://*/*"]) used for request(),
-      contains() and registerContentScripts();
-    * permissions.request() is now the first awaited call in the gesture handler (awaiting
-      anything else makes Chrome drop the user gesture);
-    * rejections are caught and the warning under the switch reflects the real state;
-    * the service worker re-registers dynamic scripts on chrome.permissions.onAdded.
+[1/6] git commit -m "fix: optional host permission"
 
-COMMIT 2/7 — fix: rtl per block
-Files:
-  src/content/bidi.js
-  src/content/entry.js
-  src/content/rules.js
-  styles/parsi-chin.css
-Command:
-  git add src/content/bidi.js src/content/entry.js src/content/rules.js styles/parsi-chin.css
-  git commit -m "fix: rtl per block"
-Changes:
-  Direction is decided once per block from content statistics instead of dir="auto" (which
-  resolves from the first strong character only) and unicode-bidi: plaintext (which resolved
-  per line). Persian-dominant = ratio >= 0.5, or >= 0.25 with a real Persian word.
-  Digits/ZWNJ/ZWJ/LRM/RLM no longer count as letters; list containers are flipped with their
-  items; English content inside an RTL block is pinned back to LTR; .pc-rtl/.pc-ltr carry the
-  !important rules so a site's own direction CSS cannot win; long paragraphs are processed.
+  git add src/options/options.js src/options/options.html src/background/service-worker.js src/shared/defaults.js manifest.json
+      manifest.json
+      src/background/service-worker.js
+      src/options/options.html
+      src/options/options.js
+      src/shared/defaults.js
 
-COMMIT 3/7 — test: rtl audit
-Files:
-  tests/smoke.test.js
-  tests/permissions.test.js
-  tools/rtl-audit.js
-Command:
-  git add tests/smoke.test.js tests/permissions.test.js tools/rtl-audit.js
-  git commit -m "test: rtl audit"
-Changes:
-  One regression assertion per defect. tests/permissions.test.js reproduces the manifest/
-  permission mismatch with a Chrome stub that rejects undeclared origins exactly like Chrome.
-  tools/rtl-audit.js loads the real sources into headless Chromium and measures 95 probes
-  across five scenarios (plain, DeepSeek container, site LTR CSS, site LTR !important,
-  native RTL): 22 failing before the RTL fix, 0 after.
+[2/6] git commit -m "fix: rtl per block"
 
-COMMIT 4/7 — feat: rtl lab
-Files:
-  demo/*
-  tools/serve.js
-Command:
-  git add demo/* tools/serve.js
-  git commit -m "feat: rtl lab"
-Changes:
-  Live lab (npm run demo): the real content script and stylesheet run inside a mock chat page
-  and every probe is measured in the visitor's browser, with switches for the current build vs
-  the v0.1.0 snapshot (demo/legacy/), a hostile direction: ltr !important stylesheet, the
-  DeepSeek container rule, apply mode and font. tools/serve.js serves the repo root and offers
-  the download bundles at /download/.
+  git add src/content/bidi.js src/content/entry.js src/content/rules.js styles/parsi-chin.css src/popup/popup.js src/popup/popup.html src/popup/popup.css
+      src/content/bidi.js
+      src/content/entry.js
+      src/content/rules.js
+      src/popup/popup.css
+      src/popup/popup.html
+      src/popup/popup.js
+      styles/parsi-chin.css
 
-COMMIT 5/7 — docs: rtl report
-Files:
-  CHANGELOG.md
-  COMMANDS.md
-  COMMITS.txt
-  CONTRIBUTING.md
-  README.md
-  ROADMAP.md
-  commit-all.sh
-  docs/*
-Command:
-  git add CHANGELOG.md COMMANDS.md COMMITS.txt CONTRIBUTING.md README.md ROADMAP.md commit-all.sh docs/*
-  git commit -m "docs: rtl report"
-Changes:
-  docs/rtl-audit.md: the root-cause audit with measurements, before/after screenshots and the
-  raw reports (docs/rtl-audit-*.json). README/CONTRIBUTING/ROADMAP rewritten in English;
-  CHANGELOG lists every fix; COMMANDS.md is the copy-paste guide; commit-all.sh commits the
-  whole change set in the seven groups described here.
+[3/6] git commit -m "test: rtl audit"
 
-COMMIT 6/7 — chore: v0.2.0
-Files:
-  .gitignore
-  package.json
-  package-lock.json
-  scripts/*
-Command:
-  git add .gitignore package.json package-lock.json scripts/*
-  git commit -m "chore: v0.2.0"
-Changes:
-  Version 0.2.0 in manifest.json and package.json, npm scripts (demo, audit:rtl), a strict
-  test script that includes the permission test, executable helper scripts, and a .gitignore
-  for local download bundles and dist/.
+  git add tests/smoke.test.js tests/ui-sanity.test.js tests/permissions.test.js tools/rtl-audit.js tools/store-shots.js
+      tests/permissions.test.js
+      tests/smoke.test.js
+      tests/ui-sanity.test.js
+      tools/rtl-audit.js
+      tools/store-shots.js
 
---------------------------------------------------------------------------
-Verification
---------------------------------------------------------------------------
-  npm test            smoke + UI tests + one regression per fixed defect
-  npm run check       JSON, JS syntax and required files
-  npm run build       dist/parsi-chin-v0.2.0.zip
-  npm run demo        live RTL lab at http://localhost:8080/
-  npm run audit:rtl   headless-Chromium audit: 95 probes, 0 failing
+[4/6] git commit -m "feat: rtl lab"
 
+  git add demo/chat-boot.js demo/chat.html demo/demo-chat.css demo/demo-lab.css demo/demo-lab.js demo/index.html demo/site-theme.css demo/legacy/bidi.js demo/legacy/defaults.js demo/legacy/entry.js demo/legacy/parsi-chin.css demo/legacy/rules.js demo/legacy/settings.js tools/serve.js tools/pages.js
+      demo/chat-boot.js
+      demo/chat.html
+      demo/demo-chat.css
+      demo/demo-lab.css
+      demo/demo-lab.js
+      demo/index.html
+      demo/legacy/bidi.js
+      demo/legacy/defaults.js
+      demo/legacy/entry.js
+      demo/legacy/parsi-chin.css
+      demo/legacy/rules.js
+      demo/legacy/settings.js
+      demo/site-theme.css
+      tools/pages.js
+      tools/serve.js
+
+[5/6] git commit -m "docs: rtl report"
+
+  git add CHANGELOG.md COMMANDS.md COMMITS.txt CONTRIBUTING.md README.md ROADMAP.md STORE.md PRIVACY.md INSTALL.md commit-all.sh docs
+      CHANGELOG.md
+      COMMANDS.md
+      COMMITS.txt
+      CONTRIBUTING.md
+      INSTALL.md
+      PRIVACY.md
+      README.md
+      ROADMAP.md
+      STORE.md
+      commit-all.sh
+      docs/img/after-v0.2.0.png
+      docs/img/before-v0.1.0.png
+      docs/img/downloads.png
+      docs/img/lab.png
+      docs/img/landing.png
+      docs/img/popup-limited.png
+      docs/img/popup.png
+      docs/rtl-audit-after.json
+      docs/rtl-audit-before.json
+      docs/rtl-audit.md
+      docs/store/listing.json
+      docs/store/marquee-1400x560.png
+      docs/store/promo-440x280.png
+      docs/store/store-1-chat-rtl.png
+      docs/store/store-2-lab.png
+      docs/store/store-3-overview.png
+
+[6/6] git commit -m "chore: v0.2.1"
+
+  git add .gitignore package.json package-lock.json scripts/build.sh scripts/check.sh scripts/ci-check.sh scripts/store-check.sh
+      .gitignore
+      package-lock.json
+      package.json
+      scripts/build.sh
+      scripts/check.sh
+      scripts/ci-check.sh
+      scripts/store-check.sh
+
+------------------------------------------------------------------------------
+Verify the result
+------------------------------------------------------------------------------
+
+  git log --oneline            # the six commits above, authored by you
+  git status --short           # empty
+
+  bash scripts/check.sh        # JSON + JavaScript syntax + required files
+  npm test                     # smoke, UI sanity, permissions
+  npm run build                # dist/parsi-chin-v0.2.1.zip  -> load unpacked in chrome://extensions
+  bash scripts/store-check.sh  # Chrome Web Store readiness (icons, listing, no remote code)
+
+  npm run audit:rtl -- --strict    # 174 probes in headless Chromium: expect 0 failing
