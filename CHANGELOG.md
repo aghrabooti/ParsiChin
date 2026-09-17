@@ -5,7 +5,8 @@ this project uses semantic versioning.
 
 ## [0.2.0] — RTL engine rewrite
 
-Fixes every defect found by the new browser audit; the same 95-probe fixture fails **22 → 0**.
+Fixes every defect found by the new browser audit. With the current fixtures the v0.1.0 sources fail
+**61 → 0** of 174 probes.
 
 ### Fixed
 
@@ -47,6 +48,43 @@ Fixes every defect found by the new browser audit; the same 95-probe fixture fai
      specificity than `.pc-rtl` could still win. Decorated blocks now also get an inline
      `direction`/`text-align` with `!important` (inline `!important` beats every author rule),
      and the element's own original `dir` **and** inline values are restored on cleanup.
+* **Every site, by default — no setup at all.** The wildcard host access moved from
+  `optional_host_permissions` into `host_permissions` and the content script now matches `*://*/*`, so
+  the extension starts fixing Persian text on any http(s) page right after installation. The extension
+  stores are excluded in the manifest, and the script itself also refuses to touch
+  `chrome.google.com`, `accounts.google.com`, `addons.mozilla.org` and non-HTML documents.
+  `allSites: false` still limits it to the built-in list, and `siteOverrides` can exclude single hosts;
+  the popup reports the state and offers to switch a host back on.
+* **Cost control for unfamiliar pages.** A page whose text contains no Persian letters is skipped
+  before the walk starts (checked with `textContent`, which does not force a layout pass), and every
+  scan is capped at 20 000 visited elements / 3 000 decorated blocks. Running everywhere stays cheap.
+* **Double-injection guard.** With the static content script matching everything, the dynamic
+  registration is skipped when the wildcard is already granted, and `window.__parsiChinBooted` makes a
+  second injection a no-op.
+* **"Works on every site" is also a one-click flow** when the user restricts site access. Any page can be enabled from the popup:
+  **Enable on this site** requests only that origin (`https://host/*`, a subset of the declared
+  optional patterns) and injects the content script into the open tab immediately, so the text is
+  fixed without a reload; **Enable on all sites** requests the full pattern and switches the mode on.
+  Both are reflected in the options page, where a single site can be switched back off.
+* **A site switched off in the options page no longer breaks the page.** `hostMatchesRule()` expected
+  an array of sites but the override checks passed a single hostname, so the first `?`-off entry threw
+  `sites.some is not a function` inside the content script and aborted the whole scan. It now accepts
+  both shapes, strips `*.`/`www.` and lowercases, and a per-site fix now also overrides "all sites"
+  mode (previously it was only honoured for hosts that had a built-in rule).
+* **Guard rails for unfamiliar pages.** Walking a foreign page is budgeted: at most 20 000 visited
+  elements and 3 000 decorated blocks per scan, and a page whose text contains no Persian letters at
+  all is skipped before the walk starts (the observer stays attached, so Persian that arrives later is
+  still handled). This keeps "all sites" mode from costing anything on Latin-only pages.
+* **The live server is now a real site.** `/` is an overview page (what was broken, the numbers,
+  every bundle with size and sha256, quick start), `/download/` lists every deliverable with
+  checksums and absolute URLs, and the lab moved to its own page. Both pages and the lab share one
+  design system (`demo/site-theme.css`), the pages are built from the working tree so they can never
+  show a stale file, and `tools/pages.js` is re-read on change (no restart while editing).
+* **The lab measures the reporter's own case.** The mock chat now contains the user's *sent message*
+  bubble next to the assistant's answer (probes `own-message`, `own-message-2`), so "the font changes
+  but my own message stays LTR" is covered by the browser lab, not just by the audit fixtures. The
+  lab also gained a results filter, live score chips (scan root, decorated blocks) and a composer that
+  demonstrates that the input box is deliberately never touched.
 * **Diagnostics.** `ParsiChin.report()` / `ParsiChin.reportJson()` (printable from the page
   console) list the settings, the scan root that was used, how many blocks were decorated and
   — most usefully — Persian-looking blocks that were *not* decorated, with the reason and the
